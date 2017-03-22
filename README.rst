@@ -1,3 +1,6 @@
+.. image:: https://api.codacy.com/project/badge/Grade/25951f521ebd4534ae64c725e0be9441
+    :target: https://www.codacy.com/app/willforde/urlquick?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=willforde/urlquick&amp;utm_campaign=Badge_Grade
+
 ========
 Urlquick
 ========
