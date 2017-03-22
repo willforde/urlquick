@@ -599,7 +599,7 @@ class Request(object):
                 url = url[1:]
 
         # Parse the url into each element
-        scheme, netloc, path, query, fragment = urlsplit(url, scheme=scheme, allow_fragments=False)
+        scheme, netloc, path, query, _ = urlsplit(url, scheme=scheme)
 
         # Insure that all element of the url can be encoded into ascii
         self.auth, netloc = self._ascii_netloc(netloc)
