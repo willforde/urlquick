@@ -916,8 +916,8 @@ class Session(CacheAdapter):
         """
 
         # Fetch settings from local or session
-        allow_redirects = allow_redirects if allow_redirects else self.allow_redirects
-        raise_for_status = raise_for_status if raise_for_status else self.raise_for_status
+        allow_redirects = self.allow_redirects if allow_redirects is None else allow_redirects
+        raise_for_status = self.raise_for_status if raise_for_status is None else raise_for_status
 
         # Ensure that all mappings of unicode data
         reqHeaders = CaseInsensitiveDict(self._headers, headers)
