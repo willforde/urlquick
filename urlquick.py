@@ -1213,7 +1213,7 @@ class Response(object):
             prevnl = chucknl
 
     # noinspection PyUnusedLocal
-    def iter_lines(self, chunk_size=None, decode_unicode=False, delimiter="\n"):
+    def iter_lines(self, chunk_size=None, decode_unicode=False, delimiter=b"\n"):
         """
         Iterates over the response data, one line at a time.
 
@@ -1224,7 +1224,12 @@ class Response(object):
         :return: Content line.
         :rtype: iter
         """
-        content = self.text if decode_unicode else self.content
+        if decode_unicode:
+            content = self.text
+            delimiter = unicode(delimiter)
+        else:
+            content = self.content
+
         prevnl = 0
         while True:
             nextnl = content.find(delimiter, prevnl)
