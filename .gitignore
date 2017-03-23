@@ -92,3 +92,6 @@ ENV/
 
 # PyCharm
 .idea/
+
+# Temp
+pytestfull
