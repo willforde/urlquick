@@ -542,12 +542,12 @@ class Request(object):
 
         # Request headers
         self.headers = headers = headers.copy()
+        self.referer_url = referer
         self.auth = None
 
         # Convert url into a fully ascii unicode string
         self.urlparts = urlparts = self._parse_url(url, params)
         self.url = urlunsplit((urlparts.scheme, urlparts.netloc, urlparts.path, urlparts.query, urlparts.fragment))
-        self.referer_url = referer
 
         # Add Referer header if not the original request
         if referer:
