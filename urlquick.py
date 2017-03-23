@@ -699,23 +699,24 @@ class Request(object):
             yield key, value
 
 
-def ensure_unicode_mapping(*mappings):
-    unicode_mapping = {}
-    for mapping in mappings:
-        if mapping:
-            # noinspection PyUnresolvedReferences
-            for key, value in mapping.items():
-                if isinstance(key, bytes):
-                    key = key.decode("utf8")
-                else:
-                    key = unicode(key)
+class UnicodeDict(dict):
+    def __init__(self, *mappings):
+        super(UnicodeDict, self).__init__()
+        for mapping in mappings:
+            if mapping:
+                # noinspection PyUnresolvedReferences
+                for key, value in mapping.items():
+                    if isinstance(key, bytes):
+                        key = key.decode("utf8")
+                    else:
+                        key = unicode(key)
 
-                if isinstance(value, bytes):
-                    value = value.decode("utf8")
-                else:
-                    value = unicode(value)
-                unicode_mapping[key] = value
-    return unicode_mapping
+                    if isinstance(value, bytes):
+                        value = value.decode("utf8")
+                    else:
+                        value = unicode(value)
+
+                    self[key] = value
 
 
 # ########################## Public API ##########################
@@ -920,8 +921,8 @@ class Session(CacheAdapter):
 
         # Ensure that all mappings of unicode data
         reqHeaders = CaseInsensitiveDict(self._headers, headers)
-        reqCookies = ensure_unicode_mapping(self._cookies, cookies)
-        reqParams = ensure_unicode_mapping(self._params, params)
+        reqCookies = UnicodeDict(self._cookies, cookies)
+        reqParams = UnicodeDict(self._params, params)
 
         # Add cookies to headers
         if reqCookies and not u"Cookie" in headers:
