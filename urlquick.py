@@ -191,8 +191,13 @@ class CaseInsensitiveDict(MutableMapping):
     def __setitem__(self, key, value):
         if isinstance(key, bytes):
             key = key.decode("ascii")
+        else:
+            key = unicode(key)
+
         if isinstance(value, bytes):
             value = value.decode("iso-8859-1")
+        else:
+            value = unicode(value)
         self._store[key.lower()] = (key, value)
 
     def __getitem__(self, key):
