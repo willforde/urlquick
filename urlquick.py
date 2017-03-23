@@ -189,15 +189,8 @@ class CaseInsensitiveDict(MutableMapping):
         return str(dict(self.items()))
 
     def __setitem__(self, key, value):
-        if isinstance(key, bytes):
-            key = key.decode("ascii")
-        else:
-            key = unicode(key)
-
-        if isinstance(value, bytes):
-            value = value.decode("iso-8859-1")
-        else:
-            value = unicode(value)
+        key = make_unicode(key, "ascii")
+        value = make_unicode(value, "iso-8859-1")
         self._store[key.lower()] = (key, value)
 
     def __getitem__(self, key):
@@ -705,17 +698,17 @@ class UnicodeDict(dict):
             if mapping:
                 # noinspection PyUnresolvedReferences
                 for key, value in mapping.items():
-                    if isinstance(key, bytes):
-                        key = key.decode("utf8")
-                    else:
-                        key = unicode(key)
-
-                    if isinstance(value, bytes):
-                        value = value.decode("utf8")
-                    else:
-                        value = unicode(value)
-
+                    key = make_unicode(key)
+                    value = make_unicode(value)
                     self[key] = value
+
+
+def make_unicode(data, encoding="utf8"):
+    """Ensure that data is a unicode string"""
+    if isinstance(data, bytes):
+        return data.decode(encoding)
+    else:
+        return unicode(data)
 
 
 # ########################## Public API ##########################
