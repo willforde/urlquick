@@ -930,7 +930,7 @@ class Session(CacheAdapter):
             reqHeaders[u"Cookie"] = header
 
         # Fetch max age of cache
-        max_age = max_age or self.max_age
+        max_age = self.max_age if max_age is None else max_age
         if max_age and not u"x-max-age" in reqHeaders:
             reqHeaders["x-max-age"] = max_age
 
@@ -1386,7 +1386,7 @@ def options(url, **kwargs):
 
 def cache_cleanup(max_age=None):
     """Remove all stale cache files"""
-    max_age = max_age or CACHE_PERIOD
+    max_age = CACHE_PERIOD if max_age is None else max_age
     cache_dir = CacheHandler.cache_dir()
     for url_hash in os.listdir(cache_dir):
         # Check that we actually have a cache file
