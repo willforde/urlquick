@@ -92,7 +92,7 @@ else:
         qsl = _parse_qsl(qs, *args, **kwargs)
         return [(key.decode(encoding, errors), value.decode(encoding, errors)) for key, value in qsl]
 
-    def urlencode(query, doseq=False, encoding="utf8", errors=None):
+    def urlencode(query, doseq=False, encoding="utf8", errors=""):
         try:
             # First check if we can use urlencode directly
             return _urlencode(query, doseq).decode("ascii")
@@ -693,7 +693,7 @@ class UnicodeDict(dict):
                     self[key] = value
 
 
-def make_unicode(data, encoding="utf8", errors=None):
+def make_unicode(data, encoding="utf8", errors=""):
     """Ensure that data is a unicode string"""
     if isinstance(data, bytes):
         return data.decode(encoding, errors)
