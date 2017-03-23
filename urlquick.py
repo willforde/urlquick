@@ -179,12 +179,11 @@ class CaseInsensitiveDict(MutableMapping):
     Credit goes to requests for this code
     http://docs.python-requests.org/en/master/
     """
-    def __init__(self, data=None, **kwargs):
+    def __init__(self, *args):
         self._store = {}
-        if data:
-            self.update(data, **kwargs)
-        else:
-            self.update(**kwargs)
+        for _dict in args:
+            if _dict:
+                self.update(_dict)
 
     def __repr__(self):
         return str(dict(self.items()))
@@ -920,9 +919,9 @@ class Session(CacheAdapter):
         raise_for_status = raise_for_status if raise_for_status else self.raise_for_status
 
         # Ensure that all mappings of unicode data
-        reqParams = ensure_unicode_mapping(self._params, params)
-        reqHeaders = ensure_unicode_mapping(self._headers, headers)
+        reqHeaders = CaseInsensitiveDict(self._headers, headers)
         reqCookies = ensure_unicode_mapping(self._cookies, cookies)
+        reqParams = ensure_unicode_mapping(self._params, params)
 
         # Add cookies to headers
         if reqCookies and not u"Cookie" in headers:
