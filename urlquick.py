@@ -697,10 +697,8 @@ class Request(object):
     def _py2_header_items(self):
         """Return request headers with no unicode value to be compatible with python2"""
         for key, value in self.headers.iteritems():
-            if isinstance(key, unicode):
-                key = key.encode("ascii")
-            if isinstance(value, unicode):
-                value = value.encode("iso-8859-1")
+            key = key.encode("ascii")
+            value = value.encode("iso-8859-1")
             yield key, value
 
 

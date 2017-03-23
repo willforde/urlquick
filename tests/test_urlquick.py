@@ -1,5 +1,6 @@
 import unittest
 import urlquick
+import types
 
 
 class TestFromResponse(unittest.TestCase):
@@ -38,10 +39,12 @@ class TestFromResponse(unittest.TestCase):
 
 
 class TestResponse(unittest.TestCase):
+    resp = None
+
     @classmethod
     def setUpClass(cls):
         urlquick.cache_cleanup(0)
-        cls.resp = urlquick.request("GET", "https://httpbin.org/redirect/1", allow_redirects=False)
+        cls.resp = urlquick.request("GET", "https://httpbin.org/get")
 
     def test_ok(self):
         self.assertTrue(self.resp.ok)
@@ -68,8 +71,41 @@ class TestResponse(unittest.TestCase):
         self.assertTrue(is_dict)
 
     def test_is_redirect(self):
-        self.assertTrue(self.resp.is_redirect)
+        self.assertFalse(self.resp.is_redirect)
 
+    def test_is_permanent_redirect(self):
+        self.assertFalse(self.resp.is_permanent_redirect)
+
+    def test_iter_content(self):
+        data = self.resp.iter_content(decode_unicode=False)
+        self.assertTrue(isinstance(data, types.GeneratorType))
+        list(data)
+
+    def test_iter_content_unicode(self):
+        data = self.resp.iter_content(decode_unicode=True)
+        self.assertTrue(isinstance(data, types.GeneratorType))
+        list(data)
+
+    def test_iter_lines(self):
+        data = self.resp.iter_lines(decode_unicode=False)
+        self.assertTrue(isinstance(data, types.GeneratorType))
+        list(data)
+
+    def test_iter_lines_unicode(self):
+        data = self.resp.iter_lines(decode_unicode=True)
+        self.assertTrue(isinstance(data, types.GeneratorType))
+        list(data)
+
+    def test_bool(self):
+        self.assertTrue(bool(self.resp))
+
+    def test_coverage(self):
+        list(self.resp)
+        repr(self.resp)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.resp.close()
 
 
 class TestMethods(unittest.TestCase):
