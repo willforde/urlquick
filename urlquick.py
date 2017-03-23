@@ -102,29 +102,19 @@ else:
         if hasattr(query, "items"):
             new_query = []
             for key, value in query.items():
-                if isinstance(key, unicode):
-                    key = key.encode(encoding, errors)
-
+                key = make_bytes(key, encoding, errors)
                 if isinstance(value, (list, tuple)):
                     for _value in value:
-                        if isinstance(_value, unicode):
-                            _value = _value.encode(encoding, errors)
-
+                        _value = make_bytes(_value, encoding, errors)
                         new_query.append((key, _value))
                 else:
-                    if isinstance(value, unicode):
-                        value = value.encode(encoding, errors)
-
+                    value = make_bytes(value, encoding, errors)
                     new_query.append((key, value))
         else:
             new_query = []
             for key, value in query:
-                if isinstance(key, unicode):
-                    key = key.encode(encoding, errors)
-
-                if isinstance(value, unicode):
-                    value = value.encode(encoding, errors)
-
+                key = make_bytes(key, encoding, errors)
+                value = make_bytes(value, encoding, errors)
                 new_query.append((key, value))
 
         return _urlencode(new_query, doseq).decode("ascii")
@@ -703,12 +693,19 @@ class UnicodeDict(dict):
                     self[key] = value
 
 
-def make_unicode(data, encoding="utf8"):
+def make_unicode(data, encoding="utf8", errors=None):
     """Ensure that data is a unicode string"""
     if isinstance(data, bytes):
-        return data.decode(encoding)
+        return data.decode(encoding, errors)
     else:
         return unicode(data)
+
+
+def make_bytes(data, encoding, errors=None):
+    if isinstance(data, unicode):
+        return data.encode(encoding, errors)
+    else:
+        return data
 
 
 # ########################## Public API ##########################
