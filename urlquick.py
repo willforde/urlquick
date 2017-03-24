@@ -91,24 +91,20 @@ else:
         return [(key.decode(encoding, errors), value.decode(encoding, errors)) for key, value in qsl]
 
     def urlencode(query, doseq=False, encoding="utf8", errors=""):
-        if hasattr(query, "items"):
-            new_query = []
-            for key, value in query.items():
-                key = key.encode(encoding, errors)
-                if isinstance(value, (list, tuple)):
-                    for _value in value:
-                        _value = _value.encode(encoding, errors)
-                        new_query.append((key, _value))
-                else:
-                    value = value.encode(encoding, errors)
-                    new_query.append((key, value))
-        else:
-            new_query = []
-            for key, value in query:
-                key = key.encode(encoding, errors)
-                value = value.encode(encoding, errors)
-                new_query.append((key, value))
+        # Fetch items as a tuple of (key, value)
+        items = query.items() if hasattr(query, "items") else query
+        new_query = []
 
+        # Process the items and encode unicode strings
+        for key, value in items:
+            key = key.encode(encoding, errors)
+            if isinstance(value, (list, tuple)):
+                value = [_value.encode(encoding, errors) for _value in value]
+            else:
+                value = value.encode(encoding, errors)
+            new_query.append((key, value))
+
+        # Decode the output of urlencode back into unicode and return
         return _urlencode(new_query, doseq).decode("ascii")
 
 __all__ = ["get", "head", "post", "Session"]
