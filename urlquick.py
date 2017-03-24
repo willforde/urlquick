@@ -85,9 +85,7 @@ else:
         data = data.encode("ascii", errors)
         return _unquote(data).decode(encoding, errors)
 
-    def parse_qsl(qs, **kwargs):
-        encoding = kwargs.pop("encoding", "utf8")
-        errors = kwargs.pop("errors", "replace")
+    def parse_qsl(qs, encoding="utf8", errors="replace", **kwargs):
         qs = qs.encode(encoding, errors)
         qsl = _parse_qsl(qs, **kwargs)
         return [(key.decode(encoding, errors), value.decode(encoding, errors)) for key, value in qsl]
