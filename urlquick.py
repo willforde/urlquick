@@ -26,7 +26,7 @@
 Urlquick
 A light-weight http client with requests like interface. Featuring persistent connections and caching support.
 
-This project was originally created for use by Kodi add-ons, but has grown into something more.
+This project was origfix bug when passing a none value for errors into str.decode failes.inally created for use by Kodi add-ons, but has grown into something more.
 I found that while requests has a very nice interface, there was a noticeable lag when importing the library.
 The other option available is to use urllib2 but then you loose the benefit of persistent
 connections that requests have. Hence the reason for this project.
@@ -85,11 +85,11 @@ else:
         data = data.encode("ascii", errors)
         return _unquote(data).decode(encoding, errors)
 
-    def parse_qsl(qs, *args, **kwargs):
+    def parse_qsl(qs, **kwargs):
         encoding = kwargs.pop("encoding", "utf8")
         errors = kwargs.pop("errors", "replace")
         qs = qs.encode(encoding, errors)
-        qsl = _parse_qsl(qs, *args, **kwargs)
+        qsl = _parse_qsl(qs, **kwargs)
         return [(key.decode(encoding, errors), value.decode(encoding, errors)) for key, value in qsl]
 
     def urlencode(query, doseq=False, encoding="utf8", errors=""):
