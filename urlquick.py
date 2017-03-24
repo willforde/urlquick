@@ -517,7 +517,7 @@ class CacheHandler(object):
 
 class Request(object):
     """A Request Object"""
-    def __init__(self, method, url, data=None, json=None, params=None, headers=None, referer=None):
+    def __init__(self, method, url, headers, data=None, json=None, params=None, referer=None):
         # Make sure that method is capitalized and unicode
         if isinstance(method, bytes):
             self.method = method.upper().decode("ascii")
@@ -925,7 +925,7 @@ class Session(CacheAdapter):
             reqHeaders["x-max-age"] = max_age
 
         # Parse url into it's individual components including params if given
-        req = Request(method, url, data, json, reqParams, reqHeaders, reqCookies)
+        req = Request(method, url, reqHeaders, data, json, reqParams, reqCookies)
 
         # Add Authorization header if needed
         auth = req.auth or auth or self.auth
@@ -964,9 +964,9 @@ class Session(CacheAdapter):
                 # Create new request for redirect
                 location = resp.headers.get(u"location")
                 if resp.status_code == 307:
-                    req = Request(req.method, location, data=req.data, headers=reqHeaders, referer=req.url)
+                    req = Request(req.method, location, reqHeaders, req.data, referer=req.url)
                 else:
-                    req = Request(u"GET", location, headers=reqHeaders, referer=req.url)
+                    req = Request(u"GET", location, reqHeaders, referer=req.url)
                 print("Redirecting to = {}".format(unquote(req.url)))
 
             # And Authorization Credentials if needed
