@@ -3,6 +3,53 @@ import urlquick
 import types
 
 
+class TestPy2Functions(unittest.TestCase):
+    def test_quote(self):
+        pass
+
+    def test_unquote(self):
+        pass
+
+    def test_parse_qsl(self):
+        pass
+
+    def test_urlencode(self):
+        pass
+
+
+class TestCaseInsensitiveDict(unittest.TestCase):
+    def test_setter(self):
+        pass
+
+
+class TestRequest(unittest.TestCase):
+    def test_mehtod_upper(self):
+        req = urlquick.Request("get", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
+        self.assertTrue(req.method == "GET")
+
+    def test_with_host(self):
+        headers = urlquick.CaseInsensitiveDict()
+        headers["host"] = "httpbin.org"
+        req = urlquick.Request("get", "https://httpbin.org/get", headers)
+        self.assertTrue("host" in req.headers)
+
+    def test_without_host(self):
+        req = urlquick.Request("get", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
+        self.assertTrue("host" in req.headers)
+
+    def test_url(self):
+        req = urlquick.Request("get", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
+        self.assertTrue(req.url == "https://httpbin.org/get")
+
+    def test_url_params(self):
+        req = urlquick.Request("get", "https://httpbin.org/get", urlquick.CaseInsensitiveDict(), params={"test":"yes"})
+        self.assertTrue(req.url == "https://httpbin.org/get?test=yes")
+
+    def test_url_referer(self):
+        req = urlquick.Request("get", "/get", urlquick.CaseInsensitiveDict(), referer="https://httpbin.org")
+        self.assertTrue(req.url == "https://httpbin.org/get")
+
+
 class TestFromResponse(unittest.TestCase):
     start_time = urlquick.datetime.utcnow()
     class Request(object):
@@ -109,6 +156,10 @@ class TestResponse(unittest.TestCase):
 
 
 class TestMethods(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.session = urlquick.Session()
+
     def setUp(self):
         urlquick.cache_cleanup(0)
 
@@ -116,15 +167,15 @@ class TestMethods(unittest.TestCase):
         self.setUp()
 
     def test_request(self):
-        resp = urlquick.request("GET", "https://httpbin.org/get")
+        resp = self.session.request("GET", "https://httpbin.org/get")
         self.assertTrue(resp.ok)
 
     def test_get(self):
-        resp = urlquick.get("https://httpbin.org/get")
+        resp = self.session.get("https://httpbin.org/get")
         self.assertTrue(resp.ok)
 
     def test_head(self):
-        resp = urlquick.head("https://httpbin.org/get")
+        resp = self.session.head("https://httpbin.org/get")
         self.assertTrue(resp.ok)
 
 

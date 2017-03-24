@@ -695,14 +695,6 @@ def make_unicode(data, encoding="utf8", errors=""):
         return unicode(data)
 
 
-def make_bytes(data, encoding, errors=None):
-    """Ensure that data is a bytes string"""
-    if isinstance(data, unicode):
-        return data.encode(encoding, errors)
-    else:
-        return data
-
-
 # ########################## Public API ##########################
 
 
