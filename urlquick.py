@@ -210,13 +210,10 @@ class ConnectionManager(object):
     def send_request(conn, req):
         conn.putrequest(req.method_safe, req.selector_safe, skip_host=1, skip_accept_encoding=1)
 
-        already_added = []
+        # Add headers to request
         for hdr, value in req.header_items():
             if value:
-                key = hdr.lower()
-                if key not in already_added:
-                    conn.putheader(hdr, value)
-                    already_added.append(key)
+                conn.putheader(hdr, value)
 
         # Convert data to bytes before sending
         conn.endheaders(req.data)
