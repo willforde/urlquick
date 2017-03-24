@@ -93,28 +93,22 @@ else:
         return [(key.decode(encoding, errors), value.decode(encoding, errors)) for key, value in qsl]
 
     def urlencode(query, doseq=False, encoding="utf8", errors=""):
-        try:
-            # First check if we can use urlencode directly
-            return _urlencode(query, doseq).decode("ascii")
-        except UnicodeEncodeError:
-            pass
-
         if hasattr(query, "items"):
             new_query = []
             for key, value in query.items():
-                key = make_bytes(key, encoding, errors)
+                key = key.encode(encoding, errors)
                 if isinstance(value, (list, tuple)):
                     for _value in value:
-                        _value = make_bytes(_value, encoding, errors)
+                        _value = _value.encode(encoding, errors)
                         new_query.append((key, _value))
                 else:
-                    value = make_bytes(value, encoding, errors)
+                    value = value.encode(encoding, errors)
                     new_query.append((key, value))
         else:
             new_query = []
             for key, value in query:
-                key = make_bytes(key, encoding, errors)
-                value = make_bytes(value, encoding, errors)
+                key = key.encode(encoding, errors)
+                value = value.encode(encoding, errors)
                 new_query.append((key, value))
 
         return _urlencode(new_query, doseq).decode("ascii")
