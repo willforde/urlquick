@@ -222,7 +222,11 @@ class ConnectionManager(object):
         return conn.getresponse()
 
     def request(self, req, timeout):
-        connections = self._connections[req.urlparts.scheme]
+        if req.urlparts.scheme in self._connections:
+            connections = self._connections[req.urlparts.scheme]
+        else:
+            raise UrlError("Unsupported scheme: {}".format(req.urlparts.scheme))
+
         host = req.host_safe
         response = None
 
@@ -238,13 +242,10 @@ class ConnectionManager(object):
                 raise
 
         if response is None:
-            scheme = req.urlparts.scheme
-            if scheme == u"http":
-                conn = HTTPConnection(host, timeout=timeout)
-            elif req.urlparts.scheme == u"https":
+            if req.urlparts.scheme == u"https":
                 conn = HTTPSConnection(host, timeout=timeout)
             else:
-                raise UrlError("Unsupported scheme: {}".format(scheme))
+                conn = HTTPConnection(host, timeout=timeout)
 
             response = self.start_connection(conn, req)
             if not response.will_close:
