@@ -261,18 +261,13 @@ class CachedProperty(object):
     itself with an ordinary attribute. Deleting the attribute resets the
     property.
     """
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None):
+    def __init__(self, fget=None):
         self.__get = fget
-        self.__set = fset
-        self.__del = fdel
-        self.__doc__ = doc or fget.__doc__
+        self.__doc__ = fget.__doc__
         self.__name__ = fget.__name__
         self.__module__ = fget.__module__
 
     def __get__(self, instance, owner):
-        if instance is None:
-            # attribute is accessed through the owner class
-            return self
         try:
             return instance.__dict__[self.__name__]
         except KeyError:
@@ -280,28 +275,10 @@ class CachedProperty(object):
             return value
 
     def __set__(self, instance, value):
-        if instance is None:
-            return self
-        if self.__set is not None:
-            value = self.__set(instance, value)
         instance.__dict__[self.__name__] = value
 
     def __delete__(self, instance):
-        if instance is None:
-            return self
-        try:
-            value = instance.__dict__.pop(self.__name__)
-        except KeyError:
-            pass
-        else:
-            if self.__del is not None:
-                self.__del(instance, value)
-
-    def setter(self, fset):
-        return self.__class__(self.__get, fset, self.__del)
-
-    def deleter(self, fdel):
-        return self.__class__(self.__get, self.__set, fdel)
+        instance.__dict__.pop(self.__name__, None)
 
 
 class CacheAdapter(object):
