@@ -562,7 +562,7 @@ class Request(object):
             # Extract auth
             auth, netloc = netloc.rsplit(u"@", 1)
             if u":" in auth:
-                auth = auth.split(u":", 1)
+                auth = tuple(auth.split(u":", 1))
             else:
                 auth = (auth, u"")
 
