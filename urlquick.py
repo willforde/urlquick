@@ -581,18 +581,24 @@ class Request(object):
     @staticmethod
     def _ascii_query(query, params):
         """Make sure that query is urlencoded and ascii compatible"""
-        if params:
-            extra_query = urlencode(params)
-            if query:
-                try:
-                    query = query.encode("ascii").decode("ascii")
-                except UnicodeEncodeError:
-                    qsl = parse_qsl(query)
-                    query = urlencode(qsl)
+        if query:
+            try:
+                # If this statement passes then query must contain only ascii characters
+                query = query.encode("ascii").decode("ascii")
+            except UnicodeEncodeError:
+                # query must contain non ascii characters
+                qsl = parse_qsl(query)
+                query = urlencode(qsl)
 
-                return u"{}&{}".format(query, extra_query)
-            else:
-                return extra_query
+        if query and params:
+            extra_query = urlencode(params)
+            return u"{}&{}".format(query, extra_query)
+        elif params:
+            return urlencode(params)
+        elif query:
+            return query
+        else:
+            return u""
 
     @property
     def method_safe(self):
