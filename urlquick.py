@@ -572,8 +572,10 @@ class Request(object):
     def _ascii_path(path):
         """Make sure that path is url encoded and ascii compatible"""
         try:
+            # If this statement passes then path must contain only ascii characters
             return path.encode("ascii").decode("ascii")
         except UnicodeEncodeError:
+            # Path must contain non ascii characters
             return quote(path)
 
     @staticmethod
