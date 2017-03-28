@@ -613,14 +613,10 @@ class Request(object):
     @property
     def selector(self):
         """Return a resource selector with the url path and query parts"""
-        urlparts = self.urlparts
-        if urlparts.path:
-            if urlparts.query:
-                return u"{}?{}".format(urlparts.path, urlparts.query)
-            else:
-                return urlparts.path
+        if self.urlparts.query:
+            return u"{}?{}".format(self.urlparts.path, self.urlparts.query)
         else:
-            return u"/"
+            return self.urlparts.path
 
     @property
     def selector_safe(self):
