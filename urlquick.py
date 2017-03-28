@@ -167,9 +167,10 @@ class CaseInsensitiveDict(MutableMapping):
         return str(dict(self.items()))
 
     def __setitem__(self, key, value):
-        key = make_unicode(key, "ascii")
-        value = make_unicode(value, "iso-8859-1")
-        self._store[key.lower()] = (key, value)
+        if value:
+            key = make_unicode(key, "ascii")
+            value = make_unicode(value, "iso-8859-1")
+            self._store[key.lower()] = (key, value)
 
     def __getitem__(self, key):
         return self._store[key.lower()][1]
@@ -633,10 +634,9 @@ class Request(object):
     def _py2_header_items(self):
         """Return request headers with no unicode value to be compatible with python2"""
         for key, value in self.headers.iteritems():
-            if value:
-                key = key.encode("ascii")
-                value = value.encode("iso-8859-1")
-                yield key, value
+            key = key.encode("ascii")
+            value = value.encode("iso-8859-1")
+            yield key, value
 
 
 class UnicodeDict(dict):
