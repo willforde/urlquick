@@ -282,58 +282,6 @@ class CachedProperty(object):
         instance.__dict__.pop(self.__name__, None)
 
 
-class CacheAdapter(object):
-    def __init__(self):
-        super(CacheAdapter, self).__init__()
-        self.__cache = None
-
-    def cache_check(self, method, url, data, headers):
-        # Fetch max age from request header
-        max_age = int(headers.pop(u"x-max-age", CACHE_PERIOD))
-        url_hash = self.hash_url(url, data)
-        if method == u"OPTIONS":
-            return None
-
-        # Check if cache exists first
-        self.__cache = cache = CacheHandler(url_hash, max_age)
-        if cache:
-            if method in ("PUT", "DELETE"):
-                print("Cache purged, {} request invalidates cache".format(method))
-                cache.delete(cache.cache_path)
-
-            elif cache.isfresh():
-                print("Cache is fresh, returning cached response")
-                return cache.response
-
-            else:
-                print("Cache is stale, checking for conditional headers")
-                cache.add_conditional_headers(headers)
-
-    def handle_response(self, method, status, callback):
-        if status == 304:
-            print("Server return 304 Not Modified response, using cached response")
-            callback()
-            self.__cache.reset_timestamp()
-            return self.__cache.response
-
-        # Cache any cachable response
-        elif status in CACHEABLE_CODES and method.upper() in CACHEABLE_METHODS:
-            response = callback()
-            print("Caching {} {} response".format(status, response[3]))
-
-            # Save response to cache and return the cached response
-            self.__cache.update(*response)
-            return self.__cache.response
-
-    @staticmethod
-    def hash_url(url, data):
-        """ Return url as a sha1 encoded hash """
-        hashing_data = url.encode()
-        if data:
-            hashing_data += data
-        return "cache-{}".format(hashlib.sha1(hashing_data).hexdigest())
-
-
 class CacheHandler(object):
     def __init__(self, url_hash, max_age=14400):
         self.max_age = max_age
@@ -476,6 +424,58 @@ class CacheHandler(object):
 
     def __nonzero__(self):
         return self.response is not None
+
+
+class CacheAdapter(object):
+    def __init__(self):
+        super(CacheAdapter, self).__init__()
+        self.__cache = None
+
+    def cache_check(self, method, url, data, headers):
+        # Fetch max age from request header
+        max_age = int(headers.pop(u"x-max-age", CACHE_PERIOD))
+        url_hash = self.hash_url(url, data)
+        if method == u"OPTIONS":
+            return None
+
+        # Check if cache exists first
+        self.__cache = cache = CacheHandler(url_hash, max_age)
+        if cache:
+            if method in ("PUT", "DELETE"):
+                print("Cache purged, {} request invalidates cache".format(method))
+                cache.delete(cache.cache_path)
+
+            elif cache.isfresh():
+                print("Cache is fresh, returning cached response")
+                return cache.response
+
+            else:
+                print("Cache is stale, checking for conditional headers")
+                cache.add_conditional_headers(headers)
+
+    def handle_response(self, method, status, callback):
+        if status == 304:
+            print("Server return 304 Not Modified response, using cached response")
+            callback()
+            self.__cache.reset_timestamp()
+            return self.__cache.response
+
+        # Cache any cachable response
+        elif status in CACHEABLE_CODES and method.upper() in CACHEABLE_METHODS:
+            response = callback()
+            print("Caching {} {} response".format(status, response[3]))
+
+            # Save response to cache and return the cached response
+            self.__cache.update(*response)
+            return self.__cache.response
+
+    @staticmethod
+    def hash_url(url, data):
+        """ Return url as a sha1 encoded hash """
+        hashing_data = url.encode()
+        if data:
+            hashing_data += data
+        return "cache-{}".format(hashlib.sha1(hashing_data).hexdigest())
 
 
 class Request(object):
