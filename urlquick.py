@@ -425,6 +425,27 @@ class CacheHandler(object):
     def __nonzero__(self):
         return self.response is not None
 
+    @staticmethod
+    def hash_url(url, data):
+        """ Return url as a sha1 encoded hash """
+        hashing_data = url.encode()
+        if data:
+            hashing_data += data
+        return "cache-{}".format(hashlib.sha1(hashing_data).hexdigest())
+
+    @classmethod
+    def cleanup(cls, max_age=None):
+        """Remove all stale cache files"""
+        max_age = CACHE_PERIOD if max_age is None else max_age
+        cache_dir = cls.cache_dir()
+        for url_hash in os.listdir(cache_dir):
+            # Check that we actually have a cache file
+            if url_hash.startswith("cache-"):
+                cache_path = os.path.join(cache_dir, url_hash)
+                # Check if the cache is not fresh and delete if so
+                if not cls.isfilefresh(cache_path, max_age):
+                    cls.delete(cache_path)
+
 
 class CacheAdapter(object):
     def __init__(self):
@@ -434,7 +455,7 @@ class CacheAdapter(object):
     def cache_check(self, method, url, data, headers):
         # Fetch max age from request header
         max_age = int(headers.pop(u"x-max-age", CACHE_PERIOD))
-        url_hash = self.hash_url(url, data)
+        url_hash = CacheHandler.hash_url(url, data)
         if method == u"OPTIONS":
             return None
 
@@ -468,14 +489,6 @@ class CacheAdapter(object):
             # Save response to cache and return the cached response
             self.__cache.update(*response)
             return self.__cache.response
-
-    @staticmethod
-    def hash_url(url, data):
-        """ Return url as a sha1 encoded hash """
-        hashing_data = url.encode()
-        if data:
-            hashing_data += data
-        return "cache-{}".format(hashlib.sha1(hashing_data).hexdigest())
 
 
 class Request(object):
@@ -1317,12 +1330,4 @@ def options(url, **kwargs):
 
 def cache_cleanup(max_age=None):
     """Remove all stale cache files"""
-    max_age = CACHE_PERIOD if max_age is None else max_age
-    cache_dir = CacheHandler.cache_dir()
-    for url_hash in os.listdir(cache_dir):
-        # Check that we actually have a cache file
-        if url_hash.startswith("cache-"):
-            cache_path = os.path.join(cache_dir, url_hash)
-            # Check if the cache is not fresh and delete if so
-            if not CacheHandler.isfilefresh(cache_path, max_age):
-                CacheHandler.delete(cache_path)
+    CacheHandler.cleanup(max_age)
