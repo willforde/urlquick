@@ -209,7 +209,7 @@ class ConnectionManager(object):
 
     @staticmethod
     def send_request(conn, req):
-        conn.putrequest(req.method_safe, req.selector_safe, skip_host=1, skip_accept_encoding=1)
+        conn.putrequest(str(req.method), str(req.selector), skip_host=1, skip_accept_encoding=1)
 
         # Add headers to request
         for hdr, value in req.header_items():
@@ -227,7 +227,7 @@ class ConnectionManager(object):
         else:
             raise UrlError("Unsupported scheme: {}".format(req.urlparts.scheme))
 
-        host = req.host_safe
+        host = str(req.host)
         response = None
 
         # urlparts.schemehost
@@ -495,6 +495,7 @@ class Request(object):
         # Convert url into a fully ascii unicode string
         self.urlparts = urlparts = self._parse_url(url, params)
         self.url = urlunsplit((urlparts.scheme, urlparts.netloc, urlparts.path, urlparts.query, urlparts.fragment))
+        self.host = urlparts.netloc
 
         # Add Referer header if not the original request
         if referer:
@@ -602,27 +603,12 @@ class Request(object):
             return u""
 
     @property
-    def method_safe(self):
-        """Return request method as unicode or str object, depending on python version"""
-        return str(self.method)
-
-    @property
-    def host_safe(self):
-        """Return hostname as unicode or str object, depending on python version"""
-        return str(self.urlparts.netloc)
-
-    @property
     def selector(self):
         """Return a resource selector with the url path and query parts"""
         if self.urlparts.query:
             return u"{}?{}".format(self.urlparts.path, self.urlparts.query)
         else:
             return self.urlparts.path
-
-    @property
-    def selector_safe(self):
-        """Return the resource selector as unicode or str object, depending on python version"""
-        return str(self.selector)
 
     def header_items(self):
         """Return request headers with unicode values or str value, depending on python version"""
