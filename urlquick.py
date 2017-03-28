@@ -320,10 +320,8 @@ class CacheHandler(object):
         # Check that the response is of status 301 or that the cache is not older than the max age
         if self.response.get(u"status") in (301, 308, 414) or self.max_age == -1:
             return True
-        elif self.isfilefresh(self.cache_path, self.max_age):
-            return True
         else:
-            return False
+            return self.isfilefresh(self.cache_path, self.max_age)
 
     def reset_timestamp(self):
         """ Reset the last modified timestamp to current time"""
