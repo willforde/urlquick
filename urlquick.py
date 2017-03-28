@@ -586,7 +586,7 @@ class Request(object):
                 # If this statement passes then query must contain only ascii characters
                 query = query.encode("ascii").decode("ascii")
             except UnicodeEncodeError:
-                # query must contain non ascii characters
+                # Query must contain non ascii characters
                 qsl = parse_qsl(query)
                 query = urlencode(qsl)
 
@@ -603,18 +603,12 @@ class Request(object):
     @property
     def method_safe(self):
         """Return request method as unicode or str object, depending on python version"""
-        if py3:
-            return self.method
-        else:
-            return self.method.encode("ascii")
+        return str(self.method)
 
     @property
     def host_safe(self):
         """Return hostname as unicode or str object, depending on python version"""
-        if py3:
-            return self.urlparts.netloc
-        else:
-            return self.urlparts.netloc.encode("ascii")
+        return str(self.urlparts.netloc)
 
     @property
     def selector(self):
@@ -631,10 +625,7 @@ class Request(object):
     @property
     def selector_safe(self):
         """Return the resource selector as unicode or str object, depending on python version"""
-        if py3:
-            return self.selector
-        else:
-            return self.selector.encode("ascii")
+        return str(self.selector)
 
     def header_items(self):
         """Return request headers with unicode values or str value, depending on python version"""
