@@ -404,10 +404,23 @@ class CacheHandler(object):
     @staticmethod
     def hash_url(url, data=None):
         """ Return url as a sha1 encoded hash """
-        hashing_data = url.encode()
+        # Make sure that url is of type bites
+        if isinstance(url, unicode):
+            url = url.encode("utf8")
+
         if data:
-            hashing_data += data
-        return "cache-{}".format(hashlib.sha1(hashing_data).hexdigest())
+            # Make sure that data is of type bites
+            if isinstance(data, unicode):
+                data = data.encode("utf8")
+            url += data
+
+        # Covert hashed url to unicode
+        urlhash = hashlib.sha1(url).hexdigest()
+        if isinstance(urlhash, bytes):
+            urlhash = unicode(urlhash)
+
+        # Append urlhash to the filename
+        return "cache-{}".format(urlhash)
 
     @classmethod
     def cleanup(cls, max_age=None):
