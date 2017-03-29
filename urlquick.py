@@ -402,7 +402,7 @@ class CacheHandler(object):
         return self.response is not None
 
     @staticmethod
-    def hash_url(url, data):
+    def hash_url(url, data=None):
         """ Return url as a sha1 encoded hash """
         hashing_data = url.encode()
         if data:
