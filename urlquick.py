@@ -372,19 +372,8 @@ class CacheHandler(object):
             print("Cache Error: Failed to deserialize cached response.", str(e))
             return None
 
-        # Convert content body form unicode to bytes
-        if isinstance(json_data[u"body"], unicode):
-            try:
-                json_data[u"body"] = json_data[u"body"].encode("ascii")
-            except UnicodeEncodeError as e:
-                print("Cache Error: Failed to re-encode body to bytes before base64 decode.", str(e))
-                return None
-
-        try:
-            json_data[u"body"] = b64decode(json_data[u"body"])
-        except TypeError as e:
-            print("Cache Error: Failed to base64 decode response body.", str(e))
-            return None
+        # Decode body content using base64
+        json_data[u"body"] = b64decode(json_data[u"body"].encode("ascii"))
 
         # Convert header dict into a case insensitive dict
         json_data[u"headers"] = CaseInsensitiveDict(json_data[u"headers"])
