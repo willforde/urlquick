@@ -354,8 +354,7 @@ class CacheHandler(object):
                          u"reason": reason, u"version": version, u"strict": strict}
 
         # Save response to disk
-        self._save(headers=dict(headers), body=body, status=status, reason=reason, version=version,
-                   strict=strict)
+        self._save(headers=dict(headers), body=body, status=status, reason=reason, version=version, strict=strict)
 
     def _load(self):
         """ Load the cache response that is stored on disk """
@@ -380,14 +379,6 @@ class CacheHandler(object):
         return json_data
 
     def _save(self, **response):
-        # Convert content body form ascii to binary
-        if isinstance(response[u"body"], unicode):
-            try:
-                response[u"body"] = response[u"body"].encode("utf8")
-            except UnicodeEncodeError as e:
-                print("Cache Error: Failed to encode body to bytes before base64 decode.", str(e))
-                return None
-
         # Base64 encode the body to make it json serializable
         response[u"body"] = b64encode(response[u"body"]).decode("ascii")
 
@@ -399,12 +390,10 @@ class CacheHandler(object):
         except (IOError, OSError) as e:
             print("Cache Error: Failed to write response to cache.", str(e))
             self.delete(self.cache_path)
-            return None
 
         except TypeError as e:
             print("Cache Error: Failed to serialize response.", str(e))
             self.delete(self.cache_path)
-            return None
 
     def __bool__(self):
         return self.response is not None
