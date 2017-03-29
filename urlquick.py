@@ -438,7 +438,6 @@ class CacheHandler(object):
 
 class CacheAdapter(object):
     def __init__(self):
-        super(CacheAdapter, self).__init__()
         self.__cache = None
 
     def cache_check(self, method, url, data, headers):
