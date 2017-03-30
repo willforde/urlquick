@@ -1011,9 +1011,9 @@ class Response(object):
         """Content of the response, in bytes."""
         # Check if Response need to be decoded, else return raw response
         content_encoding = self._headers.get(u"content-encoding", u"").lower()
-        if content_encoding == u"gzip" or content_encoding == u"x-gzip":
+        if u"gzip" in content_encoding:
             decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
-        elif content_encoding == u"deflate" or content_encoding == u"x-deflate":
+        elif u"deflate" in content_encoding:
             decoder = zlib.decompressobj()
         elif content_encoding:
             raise ContentDecodingError("Unknown encoding: {}".format(content_encoding))
