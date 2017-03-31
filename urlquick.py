@@ -1160,13 +1160,14 @@ class Response(object):
             content = self.content
 
         prevnl = 0
+        sepsize = len(delimiter)
         while True:
             nextnl = content.find(delimiter, prevnl)
             if nextnl < 0:
                 yield content[prevnl:]
                 break
             yield content[prevnl:nextnl]
-            prevnl = nextnl + 1
+            prevnl = nextnl + sepsize
 
     def raise_for_status(self):
         """Raises stored HTTPError, if one occurred."""
