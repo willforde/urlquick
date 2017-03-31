@@ -854,7 +854,7 @@ class Session(CacheAdapter):
         reqParams = UnicodeDict(self._params, params)
 
         # Add cookies to headers
-        if reqCookies and not u"Cookie" in headers:
+        if reqCookies and not u"Cookie" in reqHeaders:
             header = u"; ".join([u"{}={}".format(key, value) for key, value in reqCookies.items()])
             reqHeaders[u"Cookie"] = header
 
