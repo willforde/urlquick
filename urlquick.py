@@ -1071,14 +1071,14 @@ class Response(object):
                     except ValueError:
                         break
 
-                    link[key.strip(replace_chars)] = value.strip(replace_chars)
+                    link[key.strip(replace_chars).lower()] = value.strip(replace_chars)
 
                 key = link.get(u"rel") or link.get(u"url")
                 links[key] = link
 
             return links
         else:
-            return []
+            return {}
 
     @property
     def headers(self):
