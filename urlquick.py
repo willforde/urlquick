@@ -838,7 +838,7 @@ class Session(CacheAdapter):
         :param int timeout: (optional) Timeout in seconds.
         :param bool allow_redirects: (optional) Boolean. Enable/disable redirection. Defaults to ``True``.
         :param bool raise_for_status: (optional) Raise HTTPError if status code is > 400. Defaults to ``False``.
-        :param int max_age: Max age the cache can be before it is considered stale.
+        :param int max_age: Max age the cache can be before it is considered stale. -1 will disable caching.
 
         :return: A requests like :class:`Response <Response>` object
         :rtype: urlquick.Response
@@ -879,17 +879,21 @@ class Session(CacheAdapter):
 
         while True:
             # Send a request for resource
-            cached_response = self.cache_check(req.method, req.url, req.data, req.headers)
-            if cached_response:
-                resp = Response.from_cache(cached_response, req, start_time, history[:])
-            else:
-                raw_resp = self._cm.request(req, timeout)
-                callback = lambda: (raw_resp.getheaders(), raw_resp.read(), raw_resp.status, raw_resp.reason)
-                cached_response = self.handle_response(req.method, raw_resp.status, callback)
+            if max_age >= 0:
+                cached_response = self.cache_check(req.method, req.url, req.data, req.headers)
                 if cached_response:
                     resp = Response.from_cache(cached_response, req, start_time, history[:])
                 else:
-                    resp = Response.from_httplib(raw_resp, req, start_time, history[:])
+                    raw_resp = self._cm.request(req, timeout)
+                    callback = lambda: (raw_resp.getheaders(), raw_resp.read(), raw_resp.status, raw_resp.reason)
+                    cached_response = self.handle_response(req.method, raw_resp.status, callback)
+                    if cached_response:
+                        resp = Response.from_cache(cached_response, req, start_time, history[:])
+                    else:
+                        resp = Response.from_httplib(raw_resp, req, start_time, history[:])
+            else:
+                raw_resp = self._cm.request(req, timeout)
+                resp = Response.from_httplib(raw_resp, req, start_time, history[:])
 
             visited[req.url] += 1
             # Process the response
