@@ -1163,6 +1163,7 @@ class Response(object):
         while True:
             nextnl = content.find(delimiter, prevnl)
             if nextnl < 0:
+                yield content[prevnl:]
                 break
             yield content[prevnl:nextnl]
             prevnl = nextnl + 1
