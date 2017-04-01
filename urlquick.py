@@ -885,7 +885,7 @@ class Session(CacheAdapter):
 
         # Fetch max age of cache
         max_age = self.max_age if max_age is None else max_age
-        if max_age and not u"x-max-age" in reqHeaders:
+        if max_age is not None and u"x-max-age" not in reqHeaders:
             reqHeaders["x-max-age"] = max_age
 
         # Parse url into it's individual components including params if given
