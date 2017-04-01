@@ -951,6 +951,7 @@ class Response(object):
     def __init__(self, org_request, history):
         # The default encoding to use when no encoding is given
         self.apparent_encoding = "utf8"
+        self.raw = None
 
         # Response properties
         self.url = org_request.url
@@ -968,6 +969,7 @@ class Response(object):
     def from_cache(cls, response, org_request, start_time, history):
         """Populate response from a cached response"""
         resp = cls(org_request, history)
+        resp.raw = response
 
         # Fetch response status
         resp.status_code = response[u"status"]
@@ -985,6 +987,7 @@ class Response(object):
     def from_httplib(cls, response, org_request, start_time, history):
         """Populate response from a httplib response"""
         resp = cls(org_request, history)
+        resp.raw = response
 
         # Fetch response status
         resp.status_code = response.status
