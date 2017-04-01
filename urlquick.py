@@ -323,7 +323,6 @@ class CacheHandler(object):
         elif self.max_age == 0:
             return False
         else:
-            print("checking file")
             return self.isfilefresh(self.cache_path, self.max_age)
 
     def reset_timestamp(self):
