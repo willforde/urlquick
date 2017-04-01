@@ -318,11 +318,12 @@ class CacheHandler(object):
     def isfresh(self):
         """ Return True if cache is fresh else False """
         # Check that the response is of status 301 or that the cache is not older than the max age
-        if self.response.get(u"status") in (301, 308, 414) or self.max_age == -1:
+        if self.response.status in (301, 308, 414) or self.max_age == -1:
             return True
         elif self.max_age == 0:
             return False
         else:
+            print("checking file")
             return self.isfilefresh(self.cache_path, self.max_age)
 
     def reset_timestamp(self):
@@ -332,7 +333,7 @@ class CacheHandler(object):
     def add_conditional_headers(self, headers):
         """Return a dict of conditional headers from cache"""
         # Fetch cached headers
-        cached_headers = self.response[u"headers"]
+        cached_headers = self.response.headers
 
         # Check for conditional headers
         if u"Etag" in cached_headers:
@@ -345,15 +346,18 @@ class CacheHandler(object):
 
     def update(self, headers, body, status, reason, version=11, strict=True):
         # Convert headers into a Case Insensitive Dict
-        headers = CaseInsensitiveDict(headers)
+        if not isinstance(headers, CaseInsensitiveDict):
+            headers = CaseInsensitiveDict(headers)
 
         # Remove Transfer-Encoding from header if exists
         if u"Transfer-Encoding" in headers:
             del headers[u"Transfer-Encoding"]
 
+        # Ensure that reason is unicode
+        reason = unicode(reason)
+
         # Create response data structure
-        self.response = {u"body": body, u"headers": headers, u"status": status,
-                         u"reason": unicode(reason), u"version": version, u"strict": strict}
+        self.response = CacheResponse(headers, body, status, reason, version, strict)
 
         # Save response to disk
         self._save(headers=dict(headers), body=body, status=status, reason=reason, version=version, strict=strict)
@@ -375,10 +379,7 @@ class CacheHandler(object):
 
         # Decode body content using base64
         json_data[u"body"] = b64decode(json_data[u"body"].encode("ascii"))
-
-        # Convert header dict into a case insensitive dict
-        json_data[u"headers"] = CaseInsensitiveDict(json_data[u"headers"])
-        return json_data
+        return CacheResponse(**json_data)
 
     def _save(self, **response):
         # Base64 encode the body to make it json serializable
@@ -479,6 +480,30 @@ class CacheAdapter(object):
             # Save response to cache and return the cached response
             self.__cache.update(*response)
             return self.__cache.response
+
+
+class CacheResponse(object):
+    def __init__(self, headers, body, status, reason, version=11, strict=True):
+        # Convert headers into a Case Insensitive Dict
+        if isinstance(headers, CaseInsensitiveDict):
+            self.headers = headers
+        else:
+            self.headers = CaseInsensitiveDict(headers)
+
+        self.body = body
+        self.status = status
+        self.reason = reason
+        self.version = version
+        self.strict = strict
+
+    def getheaders(self):
+        return self.headers
+
+    def read(self):
+        return self.body
+
+    def close(self):
+        pass
 
 
 class Request(object):
@@ -878,22 +903,24 @@ class Session(CacheAdapter):
         start_time = datetime.utcnow()
 
         while True:
+            # response, org_request, start_time, history
             # Send a request for resource
             if max_age >= 0:
+                print(max_age)
                 cached_response = self.cache_check(req.method, req.url, req.data, req.headers)
                 if cached_response:
-                    resp = Response.from_cache(cached_response, req, start_time, history[:])
+                    resp = Response(cached_response, req, start_time, history[:])
                 else:
                     raw_resp = self._cm.request(req, timeout)
                     callback = lambda: (raw_resp.getheaders(), raw_resp.read(), raw_resp.status, raw_resp.reason)
                     cached_response = self.handle_response(req.method, raw_resp.status, callback)
                     if cached_response:
-                        resp = Response.from_cache(cached_response, req, start_time, history[:])
+                        resp = Response(cached_response, req, start_time, history[:])
                     else:
-                        resp = Response.from_httplib(raw_resp, req, start_time, history[:])
+                        resp = Response(raw_resp, req, start_time, history[:])
             else:
                 raw_resp = self._cm.request(req, timeout)
-                resp = Response.from_httplib(raw_resp, req, start_time, history[:])
+                resp = Response(raw_resp, req, start_time, history[:])
 
             visited[req.url] += 1
             # Process the response
@@ -948,7 +975,7 @@ class Session(CacheAdapter):
 class Response(object):
     """A Response object"""
 
-    def __init__(self, org_request, history):
+    def __init__(self, response, org_request, start_time, history):
         # The default encoding to use when no encoding is given
         self.apparent_encoding = "utf8"
         self.raw = None
@@ -957,50 +984,23 @@ class Response(object):
         self.url = org_request.url
         self.request = org_request
         self.history = history
+        self.raw = response
+
+        # Calculate elapsed time of the request
+        self.elapsed = datetime.utcnow() - start_time
 
         # Response properties stores
-        self.status_code = None
-        self.elapsed = None
-        self.reason = None
-        self._body = None
-        self._headers = None
-
-    @classmethod
-    def from_cache(cls, response, org_request, start_time, history):
-        """Populate response from a cached response"""
-        resp = cls(org_request, history)
-        resp.raw = response
-
-        # Fetch response status
-        resp.status_code = response[u"status"]
-        resp.reason = response[u"reason"]
-
-        # Fetch response headers & data
-        resp._headers = response[u"headers"]
-        resp._body = response[u"body"]
-
-        # Calculate elapsed time of the request
-        resp.elapsed = datetime.utcnow() - start_time
-        return resp
-
-    @classmethod
-    def from_httplib(cls, response, org_request, start_time, history):
-        """Populate response from a httplib response"""
-        resp = cls(org_request, history)
-        resp.raw = response
-
-        # Fetch response status
-        resp.status_code = response.status
-        resp.reason = unicode(response.reason)
-
-        # Fetch response headers & data
-        resp._headers = CaseInsensitiveDict(response.getheaders())
-        resp._body = response.read()
+        self.status_code = response.status
+        self.reason = unicode(response.reason)
+        self._body = response.read()
         response.close()
 
-        # Calculate elapsed time of the request
-        resp.elapsed = datetime.utcnow() - start_time
-        return resp
+        # Fetch response headers and convert to CaseInsensitiveDict if needed
+        headers = response.getheaders()
+        if isinstance(headers, CaseInsensitiveDict):
+            self._headers = headers
+        else:
+            self._headers = CaseInsensitiveDict(headers)
 
     @CachedProperty
     def encoding(self):
