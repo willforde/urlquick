@@ -167,7 +167,7 @@ class CaseInsensitiveDict(MutableMapping):
         return str(dict(self.items()))
 
     def __setitem__(self, key, value):
-        if value:
+        if value is not None:
             key = make_unicode(key, "ascii")
             value = make_unicode(value, "iso-8859-1")
             self._store[key.lower()] = (key, value)
@@ -877,6 +877,8 @@ class Session(CacheAdapter):
         reqCookies = UnicodeDict(self._cookies, cookies)
         reqParams = UnicodeDict(self._params, params)
 
+        print(reqHeaders)
+
         # Add cookies to headers
         if reqCookies and not u"Cookie" in reqHeaders:
             header = u"; ".join([u"{}={}".format(key, value) for key, value in reqCookies.items()])
@@ -886,6 +888,9 @@ class Session(CacheAdapter):
         max_age = self.max_age if max_age is None else max_age
         if max_age is not None and u"x-max-age" not in reqHeaders:
             reqHeaders["x-max-age"] = max_age
+
+        print(max_age)
+        print(reqHeaders)
 
         # Parse url into it's individual components including params if given
         req = Request(method, url, reqHeaders, data, json, reqParams, reqCookies)
@@ -905,7 +910,6 @@ class Session(CacheAdapter):
             # response, org_request, start_time, history
             # Send a request for resource
             if max_age >= 0:
-                print(max_age)
                 cached_response = self.cache_check(req.method, req.url, req.data, req.headers)
                 if cached_response:
                     resp = Response(cached_response, req, start_time, history[:])
