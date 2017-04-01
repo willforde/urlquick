@@ -988,7 +988,7 @@ class Response(object):
 
         # Fetch response status
         resp.status_code = response.status
-        resp.reason = response.reason
+        resp.reason = unicode(response.reason)
 
         # Fetch response headers & data
         resp._headers = CaseInsensitiveDict(response.getheaders())
