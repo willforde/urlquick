@@ -353,7 +353,7 @@ class CacheHandler(object):
 
         # Create response data structure
         self.response = {u"body": body, u"headers": headers, u"status": status,
-                         u"reason": reason, u"version": version, u"strict": strict}
+                         u"reason": unicode(reason), u"version": version, u"strict": strict}
 
         # Save response to disk
         self._save(headers=dict(headers), body=body, status=status, reason=reason, version=version, strict=strict)
