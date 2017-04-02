@@ -877,8 +877,6 @@ class Session(CacheAdapter):
         reqCookies = UnicodeDict(self._cookies, cookies)
         reqParams = UnicodeDict(self._params, params)
 
-        print(reqHeaders)
-
         # Add cookies to headers
         if reqCookies and not u"Cookie" in reqHeaders:
             header = u"; ".join([u"{}={}".format(key, value) for key, value in reqCookies.items()])
@@ -888,9 +886,6 @@ class Session(CacheAdapter):
         max_age = self.max_age if max_age is None else max_age
         if max_age is not None:
             reqHeaders["x-max-age"] = max_age
-
-        print(max_age)
-        print(reqHeaders)
 
         # Parse url into it's individual components including params if given
         req = Request(method, url, reqHeaders, data, json, reqParams, reqCookies)
