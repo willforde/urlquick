@@ -611,13 +611,9 @@ class Request(object):
     def _ascii_query(query, params):
         """Make sure that query is urlencoded and ascii compatible"""
         if query:
-            try:
-                # If this statement passes then query must contain only ascii characters
-                query = query.encode("ascii").decode("ascii")
-            except UnicodeEncodeError:
-                # Query must contain non ascii characters
-                qsl = parse_qsl(query)
-                query = urlencode(qsl)
+            # Query must contain non ascii characters
+            qsl = parse_qsl(query)
+            query = urlencode(qsl)
 
         if query and params:
             extra_query = urlencode(params)
