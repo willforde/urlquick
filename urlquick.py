@@ -883,8 +883,8 @@ class Session(CacheAdapter):
             reqHeaders[u"Cookie"] = header
 
         # Fetch max age of cache
-        max_age = self.max_age if max_age is None else max_age
-        if max_age is not None:
+        max_age = (-1 if self.max_age is None else self.max_age) if max_age is None else max_age
+        if max_age >= 0:
             reqHeaders["x-max-age"] = max_age
 
         # Parse url into it's individual components including params if given
@@ -902,7 +902,6 @@ class Session(CacheAdapter):
         start_time = datetime.utcnow()
 
         while True:
-            # response, org_request, start_time, history
             # Send a request for resource
             if max_age >= 0:
                 cached_response = self.cache_check(req.method, req.url, req.data, req.headers)
