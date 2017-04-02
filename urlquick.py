@@ -733,6 +733,14 @@ class Session(CacheAdapter):
         """
         return self._cookies
 
+    @cookies.setter
+    def cookies(self, _dict):
+        """Replace session cookies with new cookies dict"""
+        if isinstance(_dict, dict):
+            self._cookies = _dict
+        else:
+            raise ValueError("Invalid type: {}, dict required".format(type(_dict)))
+
     @property
     def params(self):
         """
@@ -743,6 +751,14 @@ class Session(CacheAdapter):
         :rtype: dict
         """
         return self._params
+
+    @params.setter
+    def params(self, _dict):
+        """Replace session params with new params dict"""
+        if isinstance(_dict, dict):
+            self._params = _dict
+        else:
+            raise ValueError("Invalid type: {}, dict required".format(type(_dict)))
 
     def get(self, url, params=None, **kwargs):
         """
