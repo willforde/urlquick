@@ -975,7 +975,7 @@ class Session(CacheAdapter):
             password = password.encode("utf8")
 
         # Create basic authentication header
-        auth = b'%s:%s' % (username, password)
+        auth = username + b":" + password
         auth = b64encode(auth).decode("ascii")
         return u"Basic {}".format(auth)
 
