@@ -44,7 +44,7 @@ from __future__ import print_function#, unicode_literals
 # Standard library imports
 from collections import MutableMapping, defaultdict
 from base64 import b64encode, b64decode
-from codecs import open
+from codecs import open as _open
 from datetime import datetime
 import json as _json
 import hashlib
@@ -364,7 +364,7 @@ class CacheHandler(object):
         """ Load the cache response that is stored on disk """
         try:
             # Atempt to read the raw cache data
-            with open(self.cache_path, "rb", encoding="utf8") as stream:
+            with _open(self.cache_path, "rb", encoding="utf8") as stream:
                 json_data = _json.load(stream)
 
         except (IOError, OSError) as e:
@@ -385,7 +385,7 @@ class CacheHandler(object):
 
         try:
             # Save the response to disk using json Serialization
-            with open(self.cache_path, "wb", encoding="utf8") as stream:
+            with _open(self.cache_path, "wb", encoding="utf8") as stream:
                 _json.dump(response, stream, indent=4, separators=(",", ":"))
 
         except (IOError, OSError) as e:
