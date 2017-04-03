@@ -153,6 +153,14 @@ class TestCaseInsensitiveDict(unittest.TestCase):
         self.assertTrue(u"key1" in ret)
         self.assertTrue(u"key2" in ret)
 
+    def test_repr(self):
+        headers = urlquick.CaseInsensitiveDict({u"key1": u"value1", "key2": "value2"})
+        test = repr(headers)
+        self.assertTrue("key1" in test)
+        self.assertTrue("value1" in test)
+        self.assertTrue("key2" in test)
+        self.assertTrue("value2" in test)
+
 
 class TestCacheHandler(unittest.TestCase):
     class create(object):
