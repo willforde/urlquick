@@ -12,6 +12,7 @@ import os
 import io
 import time
 import zlib
+import logging
 
 from functools import wraps
 
@@ -29,6 +30,16 @@ else:
         with GzipFile(fileobj=buf, mode='wb', compresslevel=compresslevel) as f:
             f.write(data)
         return buf.getvalue()
+
+def disable_logger(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        logging.disable(logging.CRITICAL)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            logging.disable(logging.NOTSET)
+    return wrapper
 
 
 class TestMisc(unittest.TestCase):
@@ -237,10 +248,11 @@ class TestCacheHandler(unittest.TestCase):
         with self.create("https://httpbin.org/get", 0) as cache:
             self.assertFalse(cache.isfresh())
 
+    @disable_logger
     def test_reset_timestamp(self):
         with self.create("https://httpbin.org/get") as cache:
             before_reset = os.stat(cache.cache_path).st_mtime
-            time.sleep(.5)
+            time.sleep(.1)
             cache.reset_timestamp()
             after_reset = os.stat(cache.cache_path).st_mtime
             self.assertNotEqual(before_reset, after_reset)
@@ -301,6 +313,7 @@ class TestCacheHandler(unittest.TestCase):
         finally:
             os.remove = _remove
 
+    @disable_logger
     def test_load_TypeError(self):
         def load(*args, **kwargs):
             raise TypeError
@@ -313,6 +326,7 @@ class TestCacheHandler(unittest.TestCase):
         finally:
             json.load = _load
 
+    @disable_logger
     def test_load_OSError(self):
         def load(*args, **kwargs):
             raise OSError
@@ -325,6 +339,7 @@ class TestCacheHandler(unittest.TestCase):
         finally:
             json.load = _load
 
+    @disable_logger
     def test_save_TypeError(self):
         def dump(*args, **kwargs):
             raise TypeError
@@ -341,6 +356,7 @@ class TestCacheHandler(unittest.TestCase):
         finally:
             json.dump = _dump
 
+    @disable_logger
     def test_save_OSError(self):
         def dump(*args, **kwargs):
             raise OSError
