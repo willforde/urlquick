@@ -38,9 +38,6 @@ the cache is reused, saving having to re-download the content body.
 TODO: Create documentation
 """
 
-# Python 2 Compatibility
-from __future__ import print_function#, unicode_literals
-
 # Standard library imports
 from collections import MutableMapping, defaultdict
 from base64 import b64encode, b64decode
