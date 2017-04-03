@@ -47,6 +47,7 @@ from base64 import b64encode, b64decode
 from codecs import open as _open
 from datetime import datetime
 import json as _json
+import logging
 import hashlib
 import socket
 import time
@@ -305,10 +306,10 @@ class CacheHandler(object):
         """Delete cache from disk"""
         try:
             os.remove(cache_path)
-        except OSError as e:
-            print("Cache Error: Unable to delete cache from disk.", str(e))
+        except OSError:
+            pass
         else:
-            print("Removed cache:", cache_path)
+            logging.debug("Removed cache: %s", cache_path)
 
     @staticmethod
     def isfilefresh(cache_path, max_age):
@@ -335,11 +336,11 @@ class CacheHandler(object):
 
         # Check for conditional headers
         if u"Etag" in cached_headers:
-            print("Found conditional header: ETag = {}".format(cached_headers[u"ETag"]))
+            logging.debug("Found conditional header: ETag = %s", cached_headers[u"ETag"])
             headers[u"If-none-match"] = cached_headers[u"ETag"]
 
         if u"Last-modified" in cached_headers:
-            print("Found conditional header: Last-Modified = {}".format(cached_headers[u"Last-modified"]))
+            logging.debug("Found conditional header: Last-Modified = %s", cached_headers[u"Last-modified"])
             headers[u"If-modified-since"] = cached_headers[u"Last-Modified"]
 
     def update(self, headers, body, status, reason, version=11, strict=True):
@@ -367,12 +368,12 @@ class CacheHandler(object):
             with _open(self.cache_path, "rb", encoding="utf8") as stream:
                 json_data = _json.load(stream)
 
-        except (IOError, OSError) as e:
-            print("Cache Error: Failed to read cached response.", str(e))
+        except (IOError, OSError):
+            logging.exception("Cache Error: Failed to read cached response.")
             return None
 
-        except TypeError as e:
-            print("Cache Error: Failed to deserialize cached response.", str(e))
+        except TypeError:
+            logging.exception("Cache Error: Failed to deserialize cached response.")
             return None
 
         # Decode body content using base64
@@ -388,12 +389,12 @@ class CacheHandler(object):
             with _open(self.cache_path, "wb", encoding="utf8") as stream:
                 _json.dump(response, stream, indent=4, separators=(",", ":"))
 
-        except (IOError, OSError) as e:
-            print("Cache Error: Failed to write response to cache.", str(e))
+        except (IOError, OSError):
+            logging.exception("Cache Error: Failed to write response to cache.")
             self.delete(self.cache_path)
 
-        except TypeError as e:
-            print("Cache Error: Failed to serialize response.", str(e))
+        except TypeError:
+            logging.exception("Cache Error: Failed to serialize response.")
             self.delete(self.cache_path)
 
     def __bool__(self):
@@ -452,20 +453,20 @@ class CacheAdapter(object):
         self.__cache = cache = CacheHandler(url_hash, max_age)
         if cache:
             if method in ("PUT", "DELETE"):
-                print("Cache purged, {} request invalidates cache".format(method))
+                logging.debug("Cache purged, %s request invalidates cache", method)
                 cache.delete(cache.cache_path)
 
             elif cache.isfresh():
-                print("Cache is fresh, returning cached response")
+                logging.debug("Cache is fresh, returning cached response")
                 return cache.response
 
             else:
-                print("Cache is stale, checking for conditional headers")
+                logging.debug("Cache is stale, checking for conditional headers")
                 cache.add_conditional_headers(headers)
 
     def handle_response(self, method, status, callback):
         if status == 304:
-            print("Server return 304 Not Modified response, using cached response")
+            logging.debug("Server return 304 Not Modified response, using cached response")
             callback()
             self.__cache.reset_timestamp()
             return self.__cache.response
@@ -473,7 +474,7 @@ class CacheAdapter(object):
         # Cache any cachable response
         elif status in CACHEABLE_CODES and method.upper() in CACHEABLE_METHODS:
             response = callback()
-            print("Caching {} {} response".format(status, response[3]))
+            logging.debug("Caching %s %s response", status, response[3])
 
             # Save response to cache and return the cached response
             self.__cache.update(*response)
@@ -945,7 +946,7 @@ class Session(CacheAdapter):
                     req = Request(req.method, location, reqHeaders, req.data, referer=req.url)
                 else:
                     req = Request(u"GET", location, reqHeaders, referer=req.url)
-                print("Redirecting to = {}".format(unquote(req.url)))
+                logging.debug("Redirecting to = %s", unquote(req.url))
 
             # And Authorization Credentials if needed
             elif auth and resp.status_code == 401 and u"Authorization" not in req.headers:
