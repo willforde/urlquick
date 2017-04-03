@@ -35,8 +35,6 @@ All GET, HEAD and POST requests are cached locally for a period of 4 hours. When
 are added to a new request e.g. 'Etag' and 'Last-modified'. Then if the response returns a 304 Not-Modified response,
 the cache is reused, saving having to re-download the content body.
 
-TODO: Create tests
-TODO: Create a mock of httplib for offline testing
 TODO: Create documentation
 """
 

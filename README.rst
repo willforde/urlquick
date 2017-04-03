@@ -20,6 +20,4 @@ the cache is reused, saving having to re-download the content body.
 TODO:
 -----
 
-- Create tests
-- Create a mock of httplib for offline testing
 - Create documentation
