@@ -23,19 +23,35 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
-Urlquick
+Urlquick:
 A light-weight http client with requests like interface. Featuring persistent connections and caching support.
 
-This project was origfix bug when passing a none value for errors into str.decode failes.inally created for use by Kodi add-ons, but has grown into something more.
+This project was originally created for use by Kodi add-ons, but has grown into something more.
 I found that while requests has a very nice interface, there was a noticeable lag when importing the library.
 The other option available is to use urllib2 but then you loose the benefit of persistent
 connections that requests have. Hence the reason for this project.
 
 All GET, HEAD and POST requests are cached locally for a period of 4 hours. When the cache expires, conditional headers
 are added to a new request e.g. 'Etag' and 'Last-modified'. Then if the response returns a 304 Not-Modified response,
-the cache is reused, saving having to re-download the content body.
+the cache is used, saving having to re-download the content body.
 
-TODO: Create documentation
+Basic Get Request:
+>>> import urlquick
+>>> urlquick.get("http://httpbin.org/get")
+<Response [200]>
+
+Basic Post Request:
+>>> urlquick.post("http://httpbin.org/post", data={"test": "data"})
+<Response [200]>
+
+Muiltiple requests using session with persistent connection:
+>>> session = urlquick.Session()
+>>> session.get("http://httpbin.org/get")
+<Response [200]>
+>>> session.post("http://httpbin.org/post", data={"test": "data"})
+<Response [200]>
+
+Reffer to urlquick.Response for documentation on the available response methods.
 """
 
 # Standard library imports
@@ -49,6 +65,7 @@ import hashlib
 import socket
 import time
 import zlib
+import ssl
 import sys
 import re
 import os
@@ -130,12 +147,20 @@ class MaxRedirects(UrlError):
     """Too many redirects."""
 
 
-class ContentDecodingError(UrlError):
-    """Failed to decode the content."""
+class ContentError(UrlError):
+    """Failed to encode/decode content."""
+
+
+class ConnError(UrlError):
+    """A Connection error occurred."""
+
+
+class SSLError(ConnError):
+    """An SSL error occurred."""
 
 
 class HTTPError(UrlError):
-    """Raised when HTTP error occurs, but also acts like non-error return"""
+    """Raised when HTTP error occurs."""
     def __init__(self, url, code, msg, hdrs):
         self.code = code
         self.msg = msg
@@ -182,6 +207,7 @@ class CaseInsensitiveDict(MutableMapping):
         return len(self._store)
 
     def copy(self):
+        """Return a shallow copy of the case-insensitive dictionary."""
         return CaseInsensitiveDict(self._store.values())
 
 
@@ -190,19 +216,22 @@ class ConnectionManager(object):
     def __init__(self):
         self._connections = {u"http": {}, u"https": {}}
 
-    def reuse_connection(self, conn, req):
+    def reuse_connection(self, *args):
+        """Reuse the saved connection."""
         try:
-            return self.send_request(conn, req)
-        except (socket.error, HTTPException):
+            return self.connect(*args)
+        except UrlError:
             return None
 
-    def start_connection(self, conn, req):
+    def connect(self, *args):
         try:
-            return self.send_request(conn, req)
+            return self.send_request(*args)
         except socket.timeout as e:
             raise Timeout(e)
+        except ssl.SSLError as e:
+            raise SSLError(e)
         except (socket.error, HTTPException) as e:
-            raise UrlError(e)
+            raise ConnError(e)
 
     @staticmethod
     def send_request(conn, req):
@@ -244,7 +273,7 @@ class ConnectionManager(object):
             else:
                 conn = HTTPConnection(host, timeout=timeout)
 
-            response = self.start_connection(conn, req)
+            response = self.connect(conn, req)
             if not response.will_close:
                 connections[host] = conn
 
@@ -350,6 +379,7 @@ class CacheHandler(object):
             del headers[u"Transfer-Encoding"]
 
         # Ensure that reason is unicode
+        # noinspection PyArgumentList
         reason = unicode(reason)
 
         # Create response data structure
@@ -416,6 +446,7 @@ class CacheHandler(object):
         # Covert hashed url to unicode
         urlhash = hashlib.sha1(url).hexdigest()
         if isinstance(urlhash, bytes):
+            # noinspection PyArgumentList
             urlhash = unicode(urlhash)
 
         # Append urlhash to the filename
@@ -543,6 +574,7 @@ class Request(object):
                 data = data.encode("utf8")
 
             if u"Content-Length" not in headers:
+                # noinspection PyArgumentList
                 self.headers[u"Content-Length"] = unicode(len(data))
 
         # Set post data
@@ -662,6 +694,7 @@ def make_unicode(data, encoding="utf8", errors=""):
     if isinstance(data, bytes):
         return data.decode(encoding, errors)
     else:
+        # noinspection PyArgumentList
         return unicode(data)
 
 
@@ -673,13 +706,13 @@ class Session(CacheAdapter):
     Provides cookie persistence, connection-pooling, and configuration.
 
     Basic Usage:
-    >>> import requests
-    >>> s = requests.Session()
+    >>> import urlquick
+    >>> s = urlquick.Session()
     >>> s.get("http://httpbin.org/get")
     <Response [200]>
 
-    Or as a context manager:
-    >>> with requests.Session() as s:
+    As a context manager:
+    >>> with urlquick.Session() as s:
     >>>     s.get("http://httpbin.org/get")
     <Response [200]>
     """
@@ -773,7 +806,7 @@ class Session(CacheAdapter):
         """
         Sends a HEAD request.
 
-        Same as GET but returns only HTTP headers and no document body.
+        Same as GET but returns only HTTP headers with no document body.
 
         :param str url: Url of the remote resource.
         :param kwargs: Optional arguments that ``request`` takes.
@@ -816,7 +849,7 @@ class Session(CacheAdapter):
 
     def patch(self, url, data=None, **kwargs):
         """
-        Sends a PUT request.
+        Sends a PATCH request.
 
         :param str url: Url of the remote resource.
         :param data: (optional) Data to send with the request to the server.
@@ -843,7 +876,7 @@ class Session(CacheAdapter):
 
     def options(self, url, **kwargs):
         """
-        Sends a HEAD request.
+        Sends a OPTIONS request.
 
         Identify allowed request methods.
 
@@ -979,24 +1012,31 @@ class Session(CacheAdapter):
 
 
 class Response(object):
-    """A Response object"""
+    """A Response object containing all data retuned from the server."""
 
     def __init__(self, response, org_request, start_time, history):
         # The default encoding to use when no encoding is given
         self.apparent_encoding = "utf8"
-        self.raw = None
-
-        # Response properties
-        self.url = org_request.url
-        self.request = org_request
-        self.history = history
+        # File-like object representation of response (for advanced usage).
         self.raw = response
 
-        # Calculate elapsed time of the request
+        # Response properties
+        # Final URL location of Response.
+        self.url = org_request.url
+        # The Request object to which this is a response.
+        self.request = org_request
+        # A list of Response objects from the history of the Request.
+        # Any redirect responses will end up here.
+        self.history = history
+
+        # The amount of time elapsed between sending the request and
+        # the arrival of the response (as a timedelta).
         self.elapsed = datetime.utcnow() - start_time
 
-        # Response properties stores
+        # Integer Code of responded HTTP Status, e.g. 404 or 200.
         self.status_code = response.status
+        # Textual reason of responded HTTP Status, e.g. "Not Found" or "OK".
+        # noinspection PyArgumentList
         self.reason = unicode(response.reason)
         self._body = response.read()
         response.close()
@@ -1010,7 +1050,7 @@ class Response(object):
 
     @CachedProperty
     def encoding(self):
-        """Encoding to decode with when accessing r.text."""
+        """Encoding to decode with when accessing resp.text."""
         if u"Content-Type" in self._headers:
             header = self._headers[u"Content-Type"]
             for sec in header.split(u";"):
@@ -1029,14 +1069,14 @@ class Response(object):
         elif u"deflate" in content_encoding:
             decoder = zlib.decompressobj()
         elif content_encoding:
-            raise ContentDecodingError("Unknown encoding: {}".format(content_encoding))
+            raise ContentError("Unknown encoding: {}".format(content_encoding))
         else:
             return self._body
 
         try:
             return decoder.decompress(self._body)
         except (IOError, zlib.error) as e:
-            raise ContentDecodingError("Failed to decompress content body: {}".format(e))
+            raise ContentError("Failed to decompress content body: {}".format(e))
 
     @CachedProperty
     def text(self):
@@ -1168,6 +1208,7 @@ class Response(object):
         """
         if decode_unicode:
             content = self.text
+            # noinspection PyArgumentList
             delimiter = unicode(delimiter)
         else:
             content = self.content
@@ -1290,7 +1331,7 @@ def put(url, data=None, **kwargs):
 
 def patch(url, data=None, **kwargs):
     """
-    Sends a PUT request.
+    Sends a PATCH request.
 
     :param url: Url of the remote resource.
     :param data: (optional) Data to send with the request to the server.
@@ -1319,7 +1360,7 @@ def delete(url, **kwargs):
 
 def options(url, **kwargs):
     """
-    Sends a HEAD request.
+    Sends a OPTIONS request.
 
     Identifying allowed request methods.
 
