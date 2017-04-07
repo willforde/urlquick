@@ -646,20 +646,20 @@ class TestConnectionManager(unittest.TestCase):
     def test_start_conn(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
         conn = self.HTTPConnection()
-        ret = self.conn.start_connection(conn, req)
+        ret = self.conn.connect(conn, req)
         self.assertIsInstance(ret, self.Response)
 
     def test_start_conn_timeout(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
         conn = self.HTTPConnection(fail=socket.timeout)
         with self.assertRaises(urlquick.Timeout):
-            self.conn.start_connection(conn, req)
+            self.conn.connect(conn, req)
 
     def test_start_conn_error(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
         conn = self.HTTPConnection(fail=socket.error)
-        with self.assertRaises(urlquick.UrlError):
-            self.conn.start_connection(conn, req)
+        with self.assertRaises(urlquick.ConnError):
+            self.conn.connect(conn, req)
 
     def test_reuse_conn(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
@@ -809,12 +809,12 @@ class TestResponse(unittest.TestCase):
 
     @create_resp(zlib.compress(b"testing data"), headers={"content-encoding": "gzip"})
     def test_content_decompress_fail(self, resp):
-        with self.assertRaisesRegexp(urlquick.ContentDecodingError, "Failed to decompress content body"):
+        with self.assertRaisesRegexp(urlquick.ContentError, "Failed to decompress content body"):
             test = resp.content
 
     @create_resp(zlib.compress(b"testing data"), headers={"content-encoding": "fail"})
     def test_content_invalid_fail(self, resp):
-        with self.assertRaisesRegexp(urlquick.ContentDecodingError, "Unknown encoding:"):
+        with self.assertRaisesRegexp(urlquick.ContentError, "Unknown encoding:"):
             test = resp.content
 
     @create_resp(b"data", headers={"Content-Type": "text/html; charset=utf-8"})
