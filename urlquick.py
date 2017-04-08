@@ -666,9 +666,10 @@ class UnicodeDict(dict):
             if mapping:
                 # noinspection PyUnresolvedReferences
                 for key, value in mapping.items():
-                    key = make_unicode(key)
-                    value = make_unicode(value)
-                    self[key] = value
+                    if value is not None:
+                        key = make_unicode(key)
+                        value = make_unicode(value)
+                        self[key] = value
 
 
 def make_unicode(data, encoding="utf8", errors=""):
