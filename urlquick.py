@@ -627,10 +627,10 @@ class Request(object):
             query = urlencode(qsl)
 
         if query and params:
-            extra_query = urlencode(params)
+            extra_query = urlencode(params, doseq=True)
             return u"{}&{}".format(query, extra_query)
         elif params:
-            return urlencode(params)
+            return urlencode(params, doseq=True)
         elif query:
             return query
         else:
