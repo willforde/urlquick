@@ -34,24 +34,6 @@ connections that requests have. Hence the reason for this project.
 All GET, HEAD and POST requests are cached locally for a period of 4 hours. When the cache expires, conditional headers
 are added to a new request e.g. 'Etag' and 'Last-modified'. Then if the response returns a 304 Not-Modified response,
 the cache is used, saving having to re-download the content body.
-
-Basic Get Request:
->>> import urlquick
->>> urlquick.get("http://httpbin.org/get")
-<Response [200]>
-
-Basic Post Request:
->>> urlquick.post("http://httpbin.org/post", data={"test": "data"})
-<Response [200]>
-
-Muiltiple requests using session with persistent connection:
->>> session = urlquick.Session()
->>> session.get("http://httpbin.org/get")
-<Response [200]>
->>> session.post("http://httpbin.org/post", data={"test": "data"})
-<Response [200]>
-
-Reffer to urlquick.Response for documentation on the available response methods.
 """
 
 # Standard library imports
@@ -121,7 +103,7 @@ else:
         # Decode the output of urlencode back into unicode and return
         return _urlencode(new_query, doseq).decode("ascii")
 
-__all__ = ["get", "head", "post", "Session"]
+__all__ = ["request", "get", "head", "post", "put", "patch", "delete", "options", "cache_cleanup", "Session"]
 __copyright__ = "Copyright (C) 2017 William Forde"
 __author__ = "William Forde"
 __license__ = "GPLv3"
@@ -704,17 +686,6 @@ def make_unicode(data, encoding="utf8", errors=""):
 class Session(CacheAdapter):
     """
     Provides cookie persistence, connection-pooling, and configuration.
-
-    Basic Usage:
-    >>> import urlquick
-    >>> s = urlquick.Session()
-    >>> s.get("http://httpbin.org/get")
-    <Response [200]>
-
-    As a context manager:
-    >>> with urlquick.Session() as s:
-    >>>     s.get("http://httpbin.org/get")
-    <Response [200]>
     """
     def __init__(self):
         super(Session, self).__init__()
@@ -1201,7 +1172,7 @@ class Response(object):
 
         :param int chunk_size: (Optional) Unused, here for compatibility with requests.
         :param decode_unicode: (Optional) True to return unicode, else False to return bytes. (default=False)
-        :param delimiter: (Optional) Delimiter use as the marker for the end of line. (default='\n')
+        :param delimiter: (Optional) Delimiter use as the marker for the end of line. (default=b'\\\\n')
 
         :return: Content line.
         :rtype: iter
@@ -1375,5 +1346,9 @@ def options(url, **kwargs):
 
 
 def cache_cleanup(max_age=None):
-    """Remove all stale cache files"""
+    """
+    Remove all stale cache files
+    
+    :param max_age: (optional) The max age the cache can be before removal.
+    """
     CacheHandler.cleanup(max_age)
