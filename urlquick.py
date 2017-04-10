@@ -23,7 +23,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
-Urlquick:
+Urlquick
+--------
 A light-weight http client with requests like interface. Featuring persistent connections and caching support.
 
 This project was originally created for use by Kodi add-ons, but has grown into something more.
@@ -32,8 +33,8 @@ The other option available is to use urllib2 but then you loose the benefit of p
 connections that requests have. Hence the reason for this project.
 
 All GET, HEAD and POST requests are cached locally for a period of 4 hours. When the cache expires, conditional headers
-are added to a new request e.g. 'Etag' and 'Last-modified'. Then if the response returns a 304 Not-Modified response,
-the cache is used, saving having to re-download the content body.
+are added to a new request e.g. 'Etag' and 'Last-modified'. Then if the server returns a 304 Not-Modified response,
+the cache is reused, saving having to re-download the content body.
 """
 
 # Standard library imports
@@ -107,7 +108,7 @@ __all__ = ["request", "get", "head", "post", "put", "patch", "delete", "options"
 __copyright__ = "Copyright (C) 2017 William Forde"
 __author__ = "William Forde"
 __license__ = "GPLv3"
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 __credit__ = "urlfetch, keepalive, requests"
 
 # Cacheable request types
@@ -230,15 +231,14 @@ class ConnectionManager(object):
         return conn.getresponse()
 
     def request(self, req, timeout):
-        if req.urlparts.scheme in self._connections:
-            connections = self._connections[req.urlparts.scheme]
+        if req.type in self._connections:
+            connections = self._connections[req.type]
         else:
-            raise UrlError("Unsupported scheme: {}".format(req.urlparts.scheme))
+            raise UrlError("Unsupported scheme: {}".format(req.type))
 
         host = str(req.host)
         response = None
 
-        # urlparts.schemehost
         if host in connections:
             conn = connections[host]
             try:
@@ -250,7 +250,7 @@ class ConnectionManager(object):
                 raise
 
         if response is None:
-            if req.urlparts.scheme == u"https":
+            if req.type == u"https":
                 conn = HTTPSConnection(host, timeout=timeout)
             else:
                 conn = HTTPConnection(host, timeout=timeout)
@@ -261,6 +261,11 @@ class ConnectionManager(object):
 
         return response
 
+    def close(self):
+        """Close all persistent connection."""
+        for scheme in self._connections.values():
+            for conn in scheme.values():
+                conn.close()
 
 class CachedProperty(object):
     """
@@ -518,20 +523,26 @@ class CacheResponse(object):
 class Request(object):
     """A Request Object"""
     def __init__(self, method, url, headers, data=None, json=None, params=None, referer=None):
-        # Make sure that method is capitalized and unicode
-        if isinstance(method, bytes):
-            self.method = method.upper().decode("ascii")
-        else:
-            self.method = method.upper()
-
-        # Request headers
-        self.headers = headers = headers.copy()
-        self.referer_url = referer
+        #: Tuple of (username, password) for basic authentication.
         self.auth = None
 
-        # Convert url into a fully ascii unicode string
-        self.urlparts = urlparts = self._parse_url(url, params)
+        # Convert url into a fully ascii unicode string using urlencoding
+        self._referer_url = referer
+        self._urlparts = urlparts = self._parse_url(url, params)
+
+        # Ensure that method is always unicode
+        if isinstance(method, bytes):
+            method = method.decode("ascii")
+
+        #: The URI scheme.
+        self.type = urlparts.scheme
+        #: The HTTP request method to use.
+        self.method = method.upper()
+        #: Dictionary of HTTP headers.
+        self.headers = headers = headers.copy()
+        #: The original URL passed to the constructor.
         self.url = urlunsplit((urlparts.scheme, urlparts.netloc, urlparts.path, urlparts.query, urlparts.fragment))
+        #: The URI authority, typically a host, but may also contain a port separated by a colon.
         self.host = urlparts.netloc
 
         # Add Referer header if not the original request
@@ -540,7 +551,7 @@ class Request(object):
 
         # Add host header to be compliant with HTTP/1.1
         if u"Host" not in headers:
-            self.headers[u"Host"] = self.urlparts.hostname
+            self.headers[u"Host"] = self._urlparts.hostname
 
         # Construct post data from a json object
         if json:
@@ -559,7 +570,7 @@ class Request(object):
                 # noinspection PyArgumentList
                 self.headers[u"Content-Length"] = unicode(len(data))
 
-        # Set post data
+        #: Request body to send to the server.
         self.data = data
 
     def _parse_url(self, url, params=None, scheme=u"http"):
@@ -577,8 +588,8 @@ class Request(object):
 
         # Check for valid url structure
         if not url[:4] == u"http":
-            if self.referer_url:
-                url = urljoin(self.referer_url, url, allow_fragments=False)
+            if self._referer_url:
+                url = urljoin(self._referer_url, url, allow_fragments=False)
 
             elif url[:3] == u"://":
                 url = url[1:]
@@ -596,7 +607,7 @@ class Request(object):
 
     @staticmethod
     def _ascii_netloc(netloc):
-        """Make sure that host is ascii compatible"""
+        """Make sure that host is ascii compatible."""
         auth = None
         if u"@" in netloc:
             # Extract auth
@@ -610,7 +621,7 @@ class Request(object):
 
     @staticmethod
     def _ascii_path(path):
-        """Make sure that path is url encoded and ascii compatible"""
+        """Make sure that path is url encoded and ascii compatible."""
         try:
             # If this statement passes then path must contain only ascii characters
             return path.encode("ascii").decode("ascii")
@@ -620,7 +631,7 @@ class Request(object):
 
     @staticmethod
     def _ascii_query(query, params):
-        """Make sure that query is urlencoded and ascii compatible"""
+        """Make sure that query is urlencoded and ascii compatible."""
         if query:
             # Ensure that query contains only valid characters
             qsl = parse_qsl(query)
@@ -638,14 +649,14 @@ class Request(object):
 
     @property
     def selector(self):
-        """Return a resource selector with the url path and query parts"""
-        if self.urlparts.query:
-            return u"{}?{}".format(self.urlparts.path, self.urlparts.query)
+        """Return a resource selector with the url path and query parts."""
+        if self._urlparts.query:
+            return u"{}?{}".format(self._urlparts.path, self._urlparts.query)
         else:
-            return self.urlparts.path
+            return self._urlparts.path
 
     def header_items(self):
-        """Return request headers with unicode values or str value, depending on python version"""
+        """Return a list of tuples (header_name, header_value) of the Request headers as native type of `str`."""
         if py3:
             return self.headers.items()
         else:
@@ -687,8 +698,11 @@ def make_unicode(data, encoding="utf8", errors=""):
 class Session(CacheAdapter):
     """
     Provides cookie persistence, connection-pooling, and configuration.
+    
+    :param kwargs: Default configuration for session attributes. e.g. max_repeats, max_redirects, allow_redirects,
+                   raise_for_status and max_age.
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(Session, self).__init__()
         self._headers = CaseInsensitiveDict()
 
@@ -702,14 +716,19 @@ class Session(CacheAdapter):
         self._cm = ConnectionManager()
         self._cookies = dict()
         self._params = dict()
-        self.auth = None
 
-        # Session settings
-        self.mac_repeats = 4
-        self.max_redirects = 10
-        self.allow_redirects = True
-        self.raise_for_status = False
-        self.max_age = CACHE_PERIOD
+        #: Default Authentication tuple to attach to Request.
+        self.auth = kwargs.get("auth", None)
+        #: Max number of repeat redirects.
+        self.max_repeats = kwargs.get("auth", 4)
+        #: Max number of redirects.
+        self.max_redirects = kwargs.get("auth", 10)
+        #: Enable/disable redirection.
+        self.allow_redirects = kwargs.get("auth", True)
+        #: Raise HTTPError if status code is > 400.
+        self.raise_for_status = kwargs.get("auth", False)
+        #: Max age the cache can be before it is considered stale. -1 will disable caching.
+        self.max_age = kwargs.get("auth", CACHE_PERIOD)
 
     @property
     def headers(self):
@@ -768,7 +787,7 @@ class Session(CacheAdapter):
         :param dict params: (optional) Dict of url query key/value pairs.
         :param kwargs: Optional arguments that ``request`` takes.
 
-        :return: A requests like :class:`Response <Response>` object
+        :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
         """
         kwargs["params"] = params
@@ -783,7 +802,7 @@ class Session(CacheAdapter):
         :param str url: Url of the remote resource.
         :param kwargs: Optional arguments that ``request`` takes.
 
-        :return: A requests like :class:`Response <Response>` object
+        :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
         """
         return self.request(u"HEAD", url, **kwargs)
@@ -799,7 +818,7 @@ class Session(CacheAdapter):
         :param json: (optional) json data to send in the body of the Request.
         :param kwargs: Optional arguments that ``request`` takes.
 
-        :return: A requests like :class:`Response <Response>` object
+        :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
         """
         return self.request(u"POST", url, data=data, json=json, **kwargs)
@@ -814,7 +833,7 @@ class Session(CacheAdapter):
         :param data: (optional) Data to send with the request to the server.
         :param kwargs: Optional arguments that ``request`` takes.
 
-        :return: A requests like :class:`Response <Response>` object
+        :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
         """
         return self.request(u"PUT", url, data=data, **kwargs)
@@ -827,7 +846,7 @@ class Session(CacheAdapter):
         :param data: (optional) Data to send with the request to the server.
         :param kwargs: Optional arguments that ``request`` takes.
 
-        :return: A requests like :class:`Response <Response>` object
+        :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
         """
         return self.request(u"PATCH", url, data=data, **kwargs)
@@ -841,7 +860,7 @@ class Session(CacheAdapter):
         :param str url: Url of the remote resource.
         :param kwargs: Optional arguments that ``request`` takes.
 
-        :return: A requests like :class:`Response <Response>` object
+        :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
         """
         return self.request(u"DELETE", url, **kwargs)
@@ -855,7 +874,7 @@ class Session(CacheAdapter):
         :param str url: Url of the remote resource.
         :param kwargs: Optional arguments that ``request`` takes.
 
-        :return: A requests like :class:`Response <Response>` object
+        :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
         """
         return self.request(u"OPTIONS", url, **kwargs)
@@ -878,7 +897,7 @@ class Session(CacheAdapter):
         :param bool raise_for_status: (optional) Raise HTTPError if status code is > 400. Defaults to ``False``.
         :param int max_age: Max age the cache can be before it is considered stale. -1 will disable caching.
 
-        :return: A requests like :class:`Response <Response>` object
+        :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
         """
 
@@ -939,7 +958,7 @@ class Session(CacheAdapter):
                 history.append(resp)
                 if len(history) >= self.max_redirects:
                     raise MaxRedirects("max_redirects exceeded")
-                if visited[req.url] >= self.mac_repeats:
+                if visited[req.url] >= self.max_repeats:
                     raise MaxRedirects("max_repeat_redirects exceeded")
 
                 # Create new request for redirect
@@ -963,11 +982,15 @@ class Session(CacheAdapter):
             else:
                 return resp
 
+    def close(self):
+        """Close all persistent connections."""
+        self._cm.close()
+
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
-        pass
+        self.close()
 
     @staticmethod
     def _auth_header(username, password):
@@ -984,32 +1007,37 @@ class Session(CacheAdapter):
 
 
 class Response(object):
-    """A Response object containing all data retuned from the server."""
+    """A Response object containing all data returned from the server."""
 
+    # noinspection PyArgumentList
     def __init__(self, response, org_request, start_time, history):
-        # The default encoding to use when no encoding is given
+        #: The default encoding to use when no encoding is given.
         self.apparent_encoding = "utf8"
-        # File-like object representation of response (for advanced usage).
+
+        #: File-like object representation of response (for advanced usage).
         self.raw = response
 
-        # Response properties
-        # Final URL location of Response.
+        #: Final URL location of Response.
         self.url = org_request.url
-        # The Request object to which this is a response.
+
+        #: The :class:`Request <urlquick.Request>` object to which this is a response.
         self.request = org_request
-        # A list of Response objects from the history of the Request.
-        # Any redirect responses will end up here.
+
+        #: A list of Response objects from the history of the Request.
+        #: Any redirect responses will end up here.
         self.history = history
 
-        # The amount of time elapsed between sending the request and
-        # the arrival of the response (as a timedelta).
+        #: The amount of time elapsed between sending the request and
+        #: the arrival of the response (as a timedelta).
         self.elapsed = datetime.utcnow() - start_time
 
-        # Integer Code of responded HTTP Status, e.g. 404 or 200.
+        #: Integer Code of responded HTTP Status, e.g. 404 or 200.
         self.status_code = response.status
-        # Textual reason of responded HTTP Status, e.g. "Not Found" or "OK".
-        # noinspection PyArgumentList
+
+        #: Textual reason of responded HTTP Status, e.g. "Not Found" or "OK".
         self.reason = unicode(response.reason)
+
+        # Fetch content body
         self._body = response.read()
         response.close()
 
@@ -1207,15 +1235,15 @@ class Response(object):
         pass
 
     def __iter__(self):
-        # Allows to use a response as an iterator
+        """Allows to use a response as an iterator."""
         return self.iter_content()
 
     def __bool__(self):
-        # Python3
+        """Returns True if status_code is less than 400."""
         return self.ok
 
     def __nonzero__(self):
-        # Python2
+        """Returns True if status_code is less than 400."""
         return self.ok
 
     def __repr__(self):
