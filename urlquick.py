@@ -104,7 +104,7 @@ else:
         # Decode the output of urlencode back into unicode and return
         return _urlencode(new_query, doseq).decode("ascii")
 
-__all__ = ["request", "get", "head", "post", "put", "patch", "delete", "options", "cache_cleanup", "Session"]
+__all__ = ["request", "get", "head", "post", "put", "patch", "delete", "cache_cleanup", "Session"]
 __repo__ = "https://github.com/willforde/urlquick"
 __copyright__ = "Copyright (C) 2017 William Forde"
 __author__ = "William Forde"
