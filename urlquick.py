@@ -115,7 +115,9 @@ __credit__ = "urlfetch, keepalive, requests"
 CACHEABLE_METHODS = (u"GET", u"HEAD", u"POST")
 CACHEABLE_CODES = (200, 203, 204, 300, 301, 302, 303, 307, 308, 410, 414)
 REDIRECT_CODES = (301, 302, 303, 307, 308)
-CACHE_PERIOD = 14400
+
+#: The default max age in seconds to use when no max age is given to request.
+MAX_AGE = 14400
 
 
 class UrlError(IOError):
@@ -442,7 +444,7 @@ class CacheHandler(object):
     @classmethod
     def cleanup(cls, max_age=None):
         """Remove all stale cache files"""
-        max_age = CACHE_PERIOD if max_age is None else max_age
+        max_age = MAX_AGE if max_age is None else max_age
         cache_dir = cls.cache_dir()
         for url_hash in os.listdir(cache_dir):
             # Check that we actually have a cache file
@@ -459,7 +461,7 @@ class CacheAdapter(object):
 
     def cache_check(self, method, url, data, headers):
         # Fetch max age from request header
-        max_age = int(headers.pop(u"x-max-age", CACHE_PERIOD))
+        max_age = int(headers.pop(u"x-max-age", MAX_AGE))
         url_hash = CacheHandler.hash_url(url, data)
         if method == u"OPTIONS":
             return None
@@ -699,8 +701,14 @@ class Session(CacheAdapter):
     """
     Provides cookie persistence, connection-pooling, and configuration.
     
-    :param kwargs: Default configuration for session attributes. e.g. max_repeats, max_redirects, allow_redirects,
-                   raise_for_status and max_age.
+    :param kwargs: Default configuration for session variables.
+    
+    :ivar int max_repeats: Max number of repeat redirects. Defaults to `4`
+    :ivar int max_redirects: Max number of redirects. Defaults to `10`
+    :ivar bool allow_redirects: Enable/disable redirection. Defaults to `True`
+    :ivar bool raise_for_status: Raise HTTPError if status code is > 400. Defaults to `False`
+    :ivar int max_age: Max age the cache can be before it's considered stale. -1 will disable caching.
+                       Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
     """
     def __init__(self, **kwargs):
         super(Session, self).__init__()
@@ -716,29 +724,27 @@ class Session(CacheAdapter):
         self._cm = ConnectionManager()
         self._cookies = dict()
         self._params = dict()
+        self._auth = None
 
-        #: Default Authentication tuple to attach to Request.
-        self.auth = kwargs.get("auth", None)
-        #: Max number of repeat redirects.
+        # Set session configuration settings
         self.max_repeats = kwargs.get("auth", 4)
-        #: Max number of redirects.
         self.max_redirects = kwargs.get("auth", 10)
-        #: Enable/disable redirection.
         self.allow_redirects = kwargs.get("auth", True)
-        #: Raise HTTPError if status code is > 400.
         self.raise_for_status = kwargs.get("auth", False)
-        #: Max age the cache can be before it is considered stale. -1 will disable caching.
-        self.max_age = kwargs.get("auth", CACHE_PERIOD)
+        self.max_age = kwargs.get("auth", MAX_AGE)
 
     @property
-    def headers(self):
-        """
-        Dictionary of headers to attach to each request.
+    def auth(self):
+        """Default Authentication tuple to attach to Request."""
+        return self._auth
 
-        :return: Session headers
-        :rtype: dict
-        """
-        return self._headers
+    @auth.setter
+    def auth(self, value):
+        """Set Default Authentication tuple."""
+        if isinstance(value, (tuple, list)):
+            self._auth = value
+        else:
+            raise ValueError("Invalid type: {}, dict required".format(type(value)))
 
     @property
     def cookies(self):
@@ -757,6 +763,16 @@ class Session(CacheAdapter):
             self._cookies = _dict
         else:
             raise ValueError("Invalid type: {}, dict required".format(type(_dict)))
+
+    @property
+    def headers(self):
+        """
+        Dictionary of headers to attach to each request.
+
+        :return: Session headers
+        :rtype: dict
+        """
+        return self._headers
 
     @property
     def params(self):
@@ -785,7 +801,7 @@ class Session(CacheAdapter):
 
         :param str url: Url of the remote resource.
         :param dict params: (optional) Dict of url query key/value pairs.
-        :param kwargs: Optional arguments that ``request`` takes.
+        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
 
         :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
@@ -800,7 +816,7 @@ class Session(CacheAdapter):
         Same as GET but returns only HTTP headers with no document body.
 
         :param str url: Url of the remote resource.
-        :param kwargs: Optional arguments that ``request`` takes.
+        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
 
         :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
@@ -814,9 +830,9 @@ class Session(CacheAdapter):
         Send data to a server, for example, customer information, file upload, etc.
 
         :param str url: Url of the remote resource.
-        :param data: (optional) Data to send with the request to the server.
+        :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
         :param json: (optional) json data to send in the body of the Request.
-        :param kwargs: Optional arguments that ``request`` takes.
+        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
 
         :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
@@ -830,8 +846,8 @@ class Session(CacheAdapter):
         Replaces all current representations of the target resource with the uploaded content.
 
         :param str url: Url of the remote resource.
-        :param data: (optional) Data to send with the request to the server.
-        :param kwargs: Optional arguments that ``request`` takes.
+        :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
+        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
 
         :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
@@ -843,8 +859,8 @@ class Session(CacheAdapter):
         Sends a PATCH request.
 
         :param str url: Url of the remote resource.
-        :param data: (optional) Data to send with the request to the server.
-        :param kwargs: Optional arguments that ``request`` takes.
+        :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
+        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
 
         :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
@@ -858,44 +874,30 @@ class Session(CacheAdapter):
         Removes all current representations of the target resource given by a URI.
 
         :param str url: Url of the remote resource.
-        :param kwargs: Optional arguments that ``request`` takes.
+        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
 
         :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
         """
         return self.request(u"DELETE", url, **kwargs)
 
-    def options(self, url, **kwargs):
-        """
-        Sends a OPTIONS request.
-
-        Identify allowed request methods.
-
-        :param str url: Url of the remote resource.
-        :param kwargs: Optional arguments that ``request`` takes.
-
-        :return: A requests like :class:`Response <urlquick.Response>` object
-        :rtype: urlquick.Response
-        """
-        return self.request(u"OPTIONS", url, **kwargs)
-
     def request(self, method, url, params=None, data=None, json=None, headers=None, cookies=None, auth=None,
                 timeout=10, allow_redirects=None, raise_for_status=None, max_age=None):
         """
-        Request a url resource.
+        Make request for online resource.
 
         :param method: HTTP request method, 'GET', 'HEAD', 'POST'.
         :param str url: Url of the remote resource.
         :param dict params: (optional) Dict of url query key/value pairs.
-        :param data: (optional) Data to send with the request to the server.
-        :param json: (optional) json data to send in the body of the Request.
+        :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
+        :param json: (optional) Json data to send in the body of the Request.
         :param dict headers: (optional) HTTP request headers.
-        :param cookies: (optional) Dict or CookieJar object to send with the request.
+        :param dict cookies: (optional) Dict or CookieJar object to send with the request.
         :param tuple auth: (optional) (username, password) for basic authentication.
         :param int timeout: (optional) Timeout in seconds.
         :param bool allow_redirects: (optional) Boolean. Enable/disable redirection. Defaults to ``True``.
         :param bool raise_for_status: (optional) Raise HTTPError if status code is > 400. Defaults to ``False``.
-        :param int max_age: Max age the cache can be before it is considered stale. -1 will disable caching.
+        :param int max_age: Max age the cache can be before it's considered stale. -1 will disable caching.
 
         :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
@@ -924,7 +926,7 @@ class Session(CacheAdapter):
         req = Request(method, url, reqHeaders, data, json, reqParams, reqCookies)
 
         # Add Authorization header if needed
-        auth = req.auth or auth or self.auth
+        auth = req.auth or auth or self._auth
         if auth:
             auth = self._auth_header(*auth)
             req.headers[u"Authorization"] = auth
@@ -1200,10 +1202,10 @@ class Response(object):
         Iterates over the response data, one line at a time.
 
         :param int chunk_size: (Optional) Unused, here for compatibility with requests.
-        :param decode_unicode: (Optional) True to return unicode, else False to return bytes. (default=False)
-        :param delimiter: (Optional) Delimiter use as the marker for the end of line. (default=b'\\\\n')
+        :param bool decode_unicode: (Optional) True to return unicode, else False to return bytes. (default=False)
+        :param bytes delimiter: (Optional) Delimiter use as the marker for the end of line. (default=b'\\\\n')
 
-        :return: Content line.
+        :return: Content lines.
         :rtype: iter
         """
         if decode_unicode:
@@ -1250,15 +1252,30 @@ class Response(object):
         return "<Response [{}]>".format(self.status_code)
 
 
-def request(method, url, **kwargs):
+def request(method, url, params=None, data=None, json=None, headers=None, cookies=None, auth=None,
+            timeout=10, allow_redirects=None, raise_for_status=None, max_age=None):
     """
-    Make a request for online resource.
+    Make request for online resource.
 
-    :return: A requests like :class:`Response <Response>` object
+    :param method: HTTP request method, 'GET', 'HEAD', 'POST'.
+    :param str url: Url of the remote resource.
+    :param dict params: (optional) Dict of url query key/value pairs.
+    :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
+    :param json: (optional) Json data to send in the body of the Request.
+    :param dict headers: (optional) HTTP request headers.
+    :param dict cookies: (optional) Dict or CookieJar object to send with the request.
+    :param tuple auth: (optional) (username, password) for basic authentication.
+    :param int timeout: (optional) Timeout in seconds.
+    :param bool allow_redirects: (optional) Boolean. Enable/disable redirection. Defaults to ``True``.
+    :param bool raise_for_status: (optional) Raise HTTPError if status code is > 400. Defaults to ``False``.
+    :param int max_age: Max age the cache can be before it's considered stale. -1 will disable caching.
+
+    :return: A requests like :class:`Response <urlquick.Response>` object
     :rtype: urlquick.Response
     """
     with Session() as session:
-        return session.request(method, url, **kwargs)
+        return session.request(method, url, params, data, json, headers, cookies, auth, timeout,
+                               allow_redirects, raise_for_status, max_age)
 
 
 def get(url, params=None, **kwargs):
@@ -1267,11 +1284,11 @@ def get(url, params=None, **kwargs):
 
     Requests data from a specified resource.
 
-    :param url: Url of the remote resource.
+    :param str url: Url of the remote resource.
     :param dict params: (optional) Dict of url query key/value pairs.
-    :param kwargs: Optional arguments that ``request`` takes.
+    :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <Response>` object
+    :return: A requests like :class:`Response <urlquick.Response>` object
     :rtype: urlquick.Response
     """
     with Session() as session:
@@ -1284,10 +1301,10 @@ def head(url, **kwargs):
 
     Same as GET but returns only HTTP headers and no document body.
 
-    :param url: Url of the remote resource.
-    :param kwargs: Optional arguments that ``request`` takes.
+    :param str url: Url of the remote resource.
+    :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <Response>` object
+    :return: A requests like :class:`Response <urlquick.Response>` object
     :rtype: urlquick.Response
     """
     with Session() as session:
@@ -1300,12 +1317,12 @@ def post(url, data=None, json=None, **kwargs):
 
     Submits data to be processed to a specified resource.
 
-    :param url: Url of the remote resource.
-    :param data: (optional) Data to send with the request to the server.
+    :param str url: Url of the remote resource.
+    :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
     :param json: (optional) json data to send in the body of the Request.
-    :param kwargs: Optional arguments that ``request`` takes.
+    :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <Response>` object
+    :return: A requests like :class:`Response <urlquick.Response>` object
     :rtype: urlquick.Response
     """
     with Session() as session:
@@ -1318,11 +1335,11 @@ def put(url, data=None, **kwargs):
 
     Uploads a representation of the specified URI.
 
-    :param url: Url of the remote resource.
-    :param data: (optional) Data to send with the request to the server.
-    :param kwargs: Optional arguments that ``request`` takes.
+    :param str url: Url of the remote resource.
+    :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
+    :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <Response>` object
+    :return: A requests like :class:`Response <urlquick.Response>` object
     :rtype: urlquick.Response
     """
     with Session() as session:
@@ -1333,11 +1350,11 @@ def patch(url, data=None, **kwargs):
     """
     Sends a PATCH request.
 
-    :param url: Url of the remote resource.
-    :param data: (optional) Data to send with the request to the server.
-    :param kwargs: Optional arguments that ``request`` takes.
+    :param str url: Url of the remote resource.
+    :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
+    :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <Response>` object
+    :return: A requests like :class:`Response <urlquick.Response>` object
     :rtype: urlquick.Response
     """
     with Session() as session:
@@ -1348,36 +1365,20 @@ def delete(url, **kwargs):
     """
     Sends a DELETE request.
 
-    :param url: Url of the remote resource.
-    :param kwargs: Optional arguments that ``request`` takes.
+    :param str url: Url of the remote resource.
+    :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <Response>` object
+    :return: A requests like :class:`Response <urlquick.Response>` object
     :rtype: urlquick.Response
     """
     with Session() as session:
         return session.request(u"DELETE", url, **kwargs)
 
 
-def options(url, **kwargs):
-    """
-    Sends a OPTIONS request.
-
-    Identifying allowed request methods.
-
-    :param url: Url of the remote resource.
-    :param kwargs: Optional arguments that ``request`` takes.
-
-    :return: A requests like :class:`Response <Response>` object
-    :rtype: urlquick.Response
-    """
-    with Session() as session:
-        return session.request(u"OPTIONS", url, **kwargs)
-
-
 def cache_cleanup(max_age=None):
     """
     Remove all stale cache files
     
-    :param max_age: (optional) The max age the cache can be before removal.
+    :param int max_age: (optional) The max age the cache can be before removal. Default of 0, Remove all cached files.
     """
     CacheHandler.cleanup(max_age)
