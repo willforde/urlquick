@@ -105,11 +105,11 @@ else:
         return _urlencode(new_query, doseq).decode("ascii")
 
 __all__ = ["request", "get", "head", "post", "put", "patch", "delete", "options", "cache_cleanup", "Session"]
+__repo__ = "https://github.com/willforde/urlquick"
 __copyright__ = "Copyright (C) 2017 William Forde"
 __author__ = "William Forde"
 __license__ = "GPLv3"
 __version__ = "0.1.0"
-__credit__ = "urlfetch, keepalive, requests"
 
 # Cacheable request types
 CACHEABLE_METHODS = (u"GET", u"HEAD", u"POST")
@@ -159,7 +159,7 @@ class HTTPError(UrlError):
 
 class CaseInsensitiveDict(MutableMapping):
     """
-    A case-insensitive ``dict``-like object.
+    A case-insensitive `dict` like object.
 
     Credit goes to requests for this code
     http://docs.python-requests.org/en/master/
@@ -581,6 +581,7 @@ class Request(object):
 
         :param str url: Url to parse
         :param dict params: params to add to url as query
+        
         :return: A 5-tuple of URL components
         :rtype: urllib.parse.SplitResult
         """
@@ -658,7 +659,7 @@ class Request(object):
             return self._urlparts.path
 
     def header_items(self):
-        """Return a list of tuples (header_name, header_value) of the Request headers as native type of `str`."""
+        """Return a list of tuples (header_name, header_value) of the Request headers as native type of :class:`str`."""
         if py3:
             return self.headers.items()
         else:
@@ -727,15 +728,20 @@ class Session(CacheAdapter):
         self._auth = None
 
         # Set session configuration settings
-        self.max_repeats = kwargs.get("auth", 4)
-        self.max_redirects = kwargs.get("auth", 10)
-        self.allow_redirects = kwargs.get("auth", True)
-        self.raise_for_status = kwargs.get("auth", False)
-        self.max_age = kwargs.get("auth", MAX_AGE)
+        self.max_age = kwargs.get("max_age", MAX_AGE)
+        self.max_repeats = kwargs.get("max_repeats", 4)
+        self.max_redirects = kwargs.get("max_redirects", 10)
+        self.allow_redirects = kwargs.get("allow_redirects", True)
+        self.raise_for_status = kwargs.get("raise_for_status", False)
 
     @property
     def auth(self):
-        """Default Authentication tuple to attach to Request."""
+        """
+        Default Authentication tuple to attach to Request.
+        
+        :return: Default authentication tuple. 
+        :rtype: tuple
+        """
         return self._auth
 
     @auth.setter
@@ -800,7 +806,7 @@ class Session(CacheAdapter):
         Requests data from a specified resource.
 
         :param str url: Url of the remote resource.
-        :param dict params: (optional) Dict of url query key/value pairs.
+        :param dict params: (optional) Dictionary of url query key/value pairs.
         :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
 
         :return: A requests like :class:`Response <urlquick.Response>` object
@@ -888,16 +894,17 @@ class Session(CacheAdapter):
 
         :param method: HTTP request method, 'GET', 'HEAD', 'POST'.
         :param str url: Url of the remote resource.
-        :param dict params: (optional) Dict of url query key/value pairs.
+        :param dict params: (optional) Dictionary of url query key/value pairs.
         :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
         :param json: (optional) Json data to send in the body of the Request.
         :param dict headers: (optional) HTTP request headers.
-        :param dict cookies: (optional) Dict or CookieJar object to send with the request.
+        :param dict cookies: (optional) Dictionary of cookies to send with the request.
         :param tuple auth: (optional) (username, password) for basic authentication.
         :param int timeout: (optional) Timeout in seconds.
         :param bool allow_redirects: (optional) Boolean. Enable/disable redirection. Defaults to ``True``.
         :param bool raise_for_status: (optional) Raise HTTPError if status code is > 400. Defaults to ``False``.
         :param int max_age: Max age the cache can be before it's considered stale. -1 will disable caching.
+                            Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
 
         :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
@@ -1063,7 +1070,7 @@ class Response(object):
 
     @CachedProperty
     def content(self):
-        """Content of the response, in bytes."""
+        """Content of the response, as bytes."""
         # Check if Response need to be decoded, else return raw response
         content_encoding = self._headers.get(u"content-encoding", u"").lower()
         if u"gzip" in content_encoding:
@@ -1082,7 +1089,7 @@ class Response(object):
 
     @CachedProperty
     def text(self):
-        """Content of the response, in unicode."""
+        """Content of the response, as unicode."""
         if self.encoding:
             return self.content.decode(self.encoding)
         else:
@@ -1093,7 +1100,7 @@ class Response(object):
 
     @CachedProperty
     def cookies(self):
-        """A dict of Cookies the server sent back."""
+        """A dictionary of Cookies the server sent back."""
         if u"Set-Cookie" in self._headers:
             cookies = self._headers[u"Set-Cookie"]
             if py3:
@@ -1107,7 +1114,7 @@ class Response(object):
 
     @CachedProperty
     def links(self):
-        """Returns the parsed header links of the response, if any."""
+        """Returns a dictionary of parsed header links of the response, if any."""
         if u"link" in self._headers:
             links = {}
 
@@ -1167,9 +1174,8 @@ class Response(object):
         """
         Returns the json-encoded content of a response.
 
-        :param kwargs: (Optional) arguments that json.loads takes.
+        :param kwargs: (Optional) arguments that :func:`json.loads` takes.
         :raises ValueError: If the response body does not contain valid json.
-        :return: Json encoded content
         """
         return _json.loads(self.text, **kwargs)
 
@@ -1182,9 +1188,6 @@ class Response(object):
 
         :param int chunk_size: (Optional) The chunk size to use for each chunk. (default=512)
         :param bool decode_unicode: (Optional) True to return unicode, else False to return bytes. (default=False)
-
-        :return: Content chunk.
-        :rtype: iter
         """
         content = self.text if decode_unicode else self.content
         prevnl = 0
@@ -1204,9 +1207,6 @@ class Response(object):
         :param int chunk_size: (Optional) Unused, here for compatibility with requests.
         :param bool decode_unicode: (Optional) True to return unicode, else False to return bytes. (default=False)
         :param bytes delimiter: (Optional) Delimiter use as the marker for the end of line. (default=b'\\\\n')
-
-        :return: Content lines.
-        :rtype: iter
         """
         if decode_unicode:
             content = self.text
@@ -1259,16 +1259,17 @@ def request(method, url, params=None, data=None, json=None, headers=None, cookie
 
     :param method: HTTP request method, 'GET', 'HEAD', 'POST'.
     :param str url: Url of the remote resource.
-    :param dict params: (optional) Dict of url query key/value pairs.
+    :param dict params: (optional) Dictionary of url query key/value pairs.
     :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
     :param json: (optional) Json data to send in the body of the Request.
     :param dict headers: (optional) HTTP request headers.
-    :param dict cookies: (optional) Dict or CookieJar object to send with the request.
+    :param dict cookies: (optional) Dictionary of cookies to send with the request.
     :param tuple auth: (optional) (username, password) for basic authentication.
     :param int timeout: (optional) Timeout in seconds.
     :param bool allow_redirects: (optional) Boolean. Enable/disable redirection. Defaults to ``True``.
     :param bool raise_for_status: (optional) Raise HTTPError if status code is > 400. Defaults to ``False``.
     :param int max_age: Max age the cache can be before it's considered stale. -1 will disable caching.
+                        Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
 
     :return: A requests like :class:`Response <urlquick.Response>` object
     :rtype: urlquick.Response
