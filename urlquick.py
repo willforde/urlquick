@@ -133,7 +133,7 @@ class MaxRedirects(UrlError):
 
 
 class ContentError(UrlError):
-    """Failed to encode/decode content."""
+    """Failed to decode content."""
 
 
 class ConnError(UrlError):
@@ -236,7 +236,7 @@ class ConnectionManager(object):
         if req.type in self._connections:
             connections = self._connections[req.type]
         else:
-            raise UrlError("Unsupported scheme: {}".format(req.type))
+            raise ConnError("Unsupported scheme: {}".format(req.type))
 
         host = str(req.host)
         response = None
@@ -908,6 +908,12 @@ class Session(CacheAdapter):
 
         :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
+        
+        :raises MaxRedirects: If too many redirects was detected.
+        :raises ConnError: If connection to server failed.
+        :raises HTTPError: If response status is greater or equal to 400 and raise_for_status is `True`.
+        :raises SSLError: If an SSL error occurs while sending the request.
+        :raises Timeout: If the connection to server timed out.
         """
 
         # Fetch settings from local or session
@@ -1070,7 +1076,11 @@ class Response(object):
 
     @CachedProperty
     def content(self):
-        """Content of the response, as bytes."""
+        """
+        Content of the response, as bytes.
+        
+        :raises ContentError: If content failes to decompress.
+        """
         # Check if Response need to be decoded, else return raw response
         content_encoding = self._headers.get(u"content-encoding", u"").lower()
         if u"gzip" in content_encoding:
@@ -1226,7 +1236,11 @@ class Response(object):
             prevnl = nextnl + sepsize
 
     def raise_for_status(self):
-        """Raises stored HTTPError, if one occurred."""
+        """
+        Raises stored error, if one occurred.
+        
+        :raises HTTPError: If response status code is greater or equal to 400
+        """
         # According to RFC 2616, "2xx" code indicates that the client's
         # request was successfully received, understood, and accepted.
         # Therefore all other codes will be considered as errors.
@@ -1273,6 +1287,12 @@ def request(method, url, params=None, data=None, json=None, headers=None, cookie
 
     :return: A requests like :class:`Response <urlquick.Response>` object
     :rtype: urlquick.Response
+    
+    :raises MaxRedirects: If too many redirects was detected.
+    :raises ConnError: If connection to server failed.
+    :raises HTTPError: If response status is greater or equal to 400 and raise_for_status is `True`.
+    :raises SSLError: If an SSL error occurs while sending the request.
+    :raises Timeout: If the connection to server timed out.
     """
     with Session() as session:
         return session.request(method, url, params, data, json, headers, cookies, auth, timeout,
