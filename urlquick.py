@@ -157,118 +157,6 @@ class HTTPError(UrlError):
         return "HTTP {} Error {}: {}".format(error_type, self.code, self.msg)
 
 
-class CaseInsensitiveDict(MutableMapping):
-    """
-    A case-insensitive `dict` like object.
-
-    Credit goes to requests for this code
-    http://docs.python-requests.org/en/master/
-    """
-    def __init__(self, *args):
-        self._store = {}
-        for _dict in args:
-            if _dict:
-                self.update(_dict)
-
-    def __repr__(self):
-        return str(dict(self.items()))
-
-    def __setitem__(self, key, value):
-        if value is not None:
-            key = make_unicode(key, "ascii")
-            value = make_unicode(value, "iso-8859-1")
-            self._store[key.lower()] = (key, value)
-
-    def __getitem__(self, key):
-        return self._store[key.lower()][1]
-
-    def __delitem__(self, key):
-        del self._store[key.lower()]
-
-    def __iter__(self):
-        return (casedkey for casedkey, _ in self._store.values())
-
-    def __len__(self):
-        return len(self._store)
-
-    def copy(self):
-        """Return a shallow copy of the case-insensitive dictionary."""
-        return CaseInsensitiveDict(self._store.values())
-
-
-class ConnectionManager(object):
-    """Manage concurrent http connections"""
-    def __init__(self):
-        self._connections = {u"http": {}, u"https": {}}
-
-    def reuse_connection(self, *args):
-        """Reuse the saved connection."""
-        try:
-            return self.connect(*args)
-        except UrlError:
-            return None
-
-    def connect(self, *args):
-        try:
-            return self.send_request(*args)
-        except socket.timeout as e:
-            raise Timeout(e)
-        except ssl.SSLError as e:
-            raise SSLError(e)
-        except (socket.error, HTTPException) as e:
-            raise ConnError(e)
-
-    @staticmethod
-    def send_request(conn, req):
-        conn.putrequest(str(req.method), str(req.selector), skip_host=1, skip_accept_encoding=1)
-
-        # Add headers to request
-        for hdr, value in req.header_items():
-            conn.putheader(hdr, value)
-
-        # Convert data to bytes before sending
-        conn.endheaders(req.data)
-
-        # return the response
-        return conn.getresponse()
-
-    def request(self, req, timeout):
-        if req.type in self._connections:
-            connections = self._connections[req.type]
-        else:
-            raise ConnError("Unsupported scheme: {}".format(req.type))
-
-        host = str(req.host)
-        response = None
-
-        if host in connections:
-            conn = connections[host]
-            try:
-                # noinspection PyTypeChecker
-                response = self.reuse_connection(conn, req)
-            except Exception:
-                del connections[host]
-                conn.close()
-                raise
-
-        if response is None:
-            if req.type == u"https":
-                conn = HTTPSConnection(host, timeout=timeout)
-            else:
-                conn = HTTPConnection(host, timeout=timeout)
-
-            response = self.connect(conn, req)
-            if not response.will_close:
-                connections[host] = conn
-
-        return response
-
-    def close(self):
-        """Close all persistent connection."""
-        for scheme in self._connections.values():
-            for conn in scheme.values():
-                conn.close()
-
 class CachedProperty(object):
     """
     Cached property.
@@ -522,6 +410,119 @@ class CacheResponse(object):
         pass
 
 
+class CaseInsensitiveDict(MutableMapping):
+    """
+    A case-insensitive `dict` like object.
+
+    Credit goes to requests for this code
+    http://docs.python-requests.org/en/master/
+    """
+    def __init__(self, *args):
+        self._store = {}
+        for _dict in args:
+            if _dict:
+                self.update(_dict)
+
+    def __repr__(self):
+        return str(dict(self.items()))
+
+    def __setitem__(self, key, value):
+        if value is not None:
+            key = make_unicode(key, "ascii")
+            value = make_unicode(value, "iso-8859-1")
+            self._store[key.lower()] = (key, value)
+
+    def __getitem__(self, key):
+        return self._store[key.lower()][1]
+
+    def __delitem__(self, key):
+        del self._store[key.lower()]
+
+    def __iter__(self):
+        return (casedkey for casedkey, _ in self._store.values())
+
+    def __len__(self):
+        return len(self._store)
+
+    def copy(self):
+        """Return a shallow copy of the case-insensitive dictionary."""
+        return CaseInsensitiveDict(self._store.values())
+
+
+class ConnectionManager(object):
+    """Manage concurrent http connections"""
+    def __init__(self):
+        self._connections = {u"http": {}, u"https": {}}
+
+    def reuse_connection(self, *args):
+        """Reuse the saved connection."""
+        try:
+            return self.connect(*args)
+        except UrlError:
+            return None
+
+    def connect(self, *args):
+        try:
+            return self.send_request(*args)
+        except socket.timeout as e:
+            raise Timeout(e)
+        except ssl.SSLError as e:
+            raise SSLError(e)
+        except (socket.error, HTTPException) as e:
+            raise ConnError(e)
+
+    @staticmethod
+    def send_request(conn, req):
+        conn.putrequest(str(req.method), str(req.selector), skip_host=1, skip_accept_encoding=1)
+
+        # Add headers to request
+        for hdr, value in req.header_items():
+            conn.putheader(hdr, value)
+
+        # Convert data to bytes before sending
+        conn.endheaders(req.data)
+
+        # return the response
+        return conn.getresponse()
+
+    def request(self, req, timeout):
+        if req.type in self._connections:
+            connections = self._connections[req.type]
+        else:
+            raise ConnError("Unsupported scheme: {}".format(req.type))
+
+        host = str(req.host)
+        response = None
+
+        if host in connections:
+            conn = connections[host]
+            try:
+                # noinspection PyTypeChecker
+                response = self.reuse_connection(conn, req)
+            except Exception:
+                del connections[host]
+                conn.close()
+                raise
+
+        if response is None:
+            if req.type == u"https":
+                conn = HTTPSConnection(host, timeout=timeout)
+            else:
+                conn = HTTPConnection(host, timeout=timeout)
+
+            response = self.connect(conn, req)
+            if not response.will_close:
+                connections[host] = conn
+
+        return response
+
+    def close(self):
+        """Close all persistent connection."""
+        for scheme in self._connections.values():
+            for conn in scheme.values():
+                conn.close()
+
+
 class Request(object):
     """A Request Object"""
     def __init__(self, method, url, headers, data=None, json=None, params=None, referer=None):
@@ -700,9 +701,9 @@ def make_unicode(data, encoding="utf8", errors=""):
 class Session(CacheAdapter):
     """
     Provides cookie persistence, connection-pooling, and configuration.
-    
+
     :param kwargs: Default configuration for session variables.
-    
+
     :ivar int max_repeats: Max number of repeat redirects. Defaults to `4`
     :ivar int max_redirects: Max number of redirects. Defaults to `10`
     :ivar bool allow_redirects: Enable/disable redirection. Defaults to `True`
@@ -737,7 +738,7 @@ class Session(CacheAdapter):
     def auth(self):
         """
         Default Authentication tuple to attach to Request.
-        
+
         :return: Default authentication tuple.
         :rtype: tuple
         """
