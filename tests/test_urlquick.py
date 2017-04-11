@@ -1385,13 +1385,6 @@ class TestSession(unittest.TestCase):
             self.assertEqual(resp.request.method, "DELETE")
 
     @mock_response()
-    def test_session_options(self):
-        with urlquick.Session() as session:
-            resp = session.options("https://httpbin.org/post", max_age=-1)
-            self.assertResponse(resp, Response)
-            self.assertEqual(resp.request.method, "OPTIONS")
-
-    @mock_response()
     def test_request(self):
         resp = urlquick.request("GET", "https://httpbin.org/get", max_age=-1)
         self.assertResponse(resp, Response)
@@ -1439,9 +1432,3 @@ class TestSession(unittest.TestCase):
         resp = urlquick.delete("https://httpbin.org/delete", max_age=-1)
         self.assertResponse(resp, Response)
         self.assertEqual(resp.request.method, "DELETE")
-
-    @mock_response()
-    def test_options(self):
-        resp = urlquick.options("https://httpbin.org/post", max_age=-1)
-        self.assertResponse(resp, Response)
-        self.assertEqual(resp.request.method, "OPTIONS")
