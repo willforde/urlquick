@@ -1,3 +1,9 @@
+.. image:: https://badge.fury.io/py/urlquick.svg
+    :target: https://pypi.python.org/pypi/urlquick
+
+.. image:: https://readthedocs.org/projects/urlquick/badge/?version=latest
+    :target: http://urlquick.readthedocs.io/en/latest/?badge=latest
+
 .. image:: https://travis-ci.org/willforde/urlquick.svg?branch=master
     :target: https://travis-ci.org/willforde/urlquick
 
@@ -7,9 +13,11 @@
 .. image:: https://api.codacy.com/project/badge/Grade/25951f521ebd4534ae64c725e0be9441
     :target: https://www.codacy.com/app/willforde/urlquick?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=willforde/urlquick&amp;utm_campaign=Badge_Grade
 
-========
+.. image:: http://badge.kloud51.com/pypi/py_versions/urlquick.svg
+    :target: https://pypi.python.org/pypi/urlquick
+
 Urlquick
-========
+--------
 A light-weight http client with requests like interface. Featuring persistent connections and caching support.
 
 This project was originally created for use by Kodi add-ons, but has grown into something more.
@@ -18,12 +26,48 @@ The other option available is to use urllib2 but then you loose the benefit of p
 connections that requests have. Hence the reason for this project.
 
 All GET, HEAD and POST requests are cached locally for a period of 4 hours. When the cache expires, conditional headers
-are added to a new request e.g. 'Etag' and 'Last-modified'. Then if the response returns a 304 Not-Modified response,
+are added to a new request e.g. 'Etag' and 'Last-modified'. Then if the server returns a 304 Not-Modified response,
 the cache is reused, saving having to re-download the content body.
 
-------------
+Features
+--------
+* Simple Keep-Alive & Connection Pooling
+* Sessions with limited Cookie Controls
+* International Domains and URLs
+* Automatic Content Decoding
+* Elegant Key/Value Cookies
+* Automatic Decompression
+* Unicode Response Bodies
+* Basic Authentication
+* Connection Timeouts
+* Resource Caching
 
-TODO:
+Install
+-------
+Run ::
+
+    pip install urlquick
+
+-or- ::
+
+    pip install git+https://github.com/willforde/urlquick.git
+
+Usage
 -----
 
-- Create documentation
+Urlquick is fairly similar to the requests library but only implements more top level methods like get, post and put.
+The Session class is also implemented but in a more limited form. And the response object is fully compatible with the requests response object. ::
+
+    >>> import urlquick
+    >>> r = urlquick.get('https://api.github.com/user', auth=('user', 'pass'))
+    >>> r.status_code
+    200
+    >>> r.headers['content-type']
+    'application/json; charset=utf8'
+    >>> r.encoding
+    'utf-8'
+    >>> r.text
+    u'{"type":"User"...'
+    >>> r.json()
+    {u'private_gists': 419, u'total_private_repos': 77, ...}
+

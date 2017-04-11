@@ -581,7 +581,6 @@ class Request(object):
 
         :param str url: Url to parse
         :param dict params: params to add to url as query
-        
         :return: A 5-tuple of URL components
         :rtype: urllib.parse.SplitResult
         """
@@ -739,7 +738,7 @@ class Session(CacheAdapter):
         """
         Default Authentication tuple to attach to Request.
         
-        :return: Default authentication tuple. 
+        :return: Default authentication tuple.
         :rtype: tuple
         """
         return self._auth
