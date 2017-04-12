@@ -320,7 +320,7 @@ class CacheHandler(object):
                 data = data.encode("utf8")
             url += data
 
-        # Covert hashed url to unicode
+        # Convert hashed url to unicode
         urlhash = hashlib.sha1(url).hexdigest()
         if isinstance(urlhash, bytes):
             # noinspection PyArgumentList
