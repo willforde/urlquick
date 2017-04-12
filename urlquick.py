@@ -918,7 +918,7 @@ class Session(ConnectionManager):
 
         :raises MaxRedirects: If too many redirects was detected.
         :raises ConnError: If connection to server failed.
-        :raises HTTPError: If response status is greater or equal to 400 and raise_for_status is `True`.
+        :raises HTTPError: If response status is greater or equal to 400 and raise_for_status is ``True``.
         :raises SSLError: If an SSL error occurs while sending the request.
         :raises Timeout: If the connection to server timed out.
         """
@@ -1278,7 +1278,7 @@ def request(method, url, params=None, data=None, json=None, headers=None, cookie
     
     :raises MaxRedirects: If too many redirects was detected.
     :raises ConnError: If connection to server failed.
-    :raises HTTPError: If response status is greater or equal to 400 and raise_for_status is `True`.
+    :raises HTTPError: If response status is greater or equal to 400 and raise_for_status is ``True``.
     :raises SSLError: If an SSL error occurs while sending the request.
     :raises Timeout: If the connection to server timed out.
     """
