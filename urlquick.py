@@ -944,7 +944,7 @@ class Session(ConnectionManager):
         req = Request(method, url, reqHeaders, data, json, reqParams, reqCookies)
 
         # Add Authorization header if needed
-        auth = req.auth or auth or self._auth
+        auth = auth or req.auth or self._auth
         if auth:
             auth = self._auth_header(*auth)
             req.headers[u"Authorization"] = auth

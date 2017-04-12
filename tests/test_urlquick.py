@@ -1266,6 +1266,7 @@ class TestSession(unittest.TestCase):
         with urlquick.Session() as session:
             resp = session.request(u"GET", "https://httpbin.org/basic-auth/testu/testp", auth=("testu", "testp"), max_age=-1)
             self.assertResponse(resp, Response)
+            self.assertTrue(resp.status_code, 200)
 
     @mock_response()
     def test_auth_session(self):
@@ -1274,6 +1275,25 @@ class TestSession(unittest.TestCase):
             self.assertTupleEqual(session.auth, ("testu", "testp"))
             resp = session.request(u"GET", "https://httpbin.org/basic-auth/testu/testp", max_age=-1)
             self.assertResponse(resp, Response)
+            self.assertTrue(resp.status_code, 200)
+
+    @mock_response()
+    def test_auth_acc_netloc_auth(self):
+        """Check that only the auth credentials within the url are used. Ignore session auth."""
+        with urlquick.Session() as session:
+            session.auth = ("ufail", "pfail")  # Should be ignored
+            resp = session.request(u"GET", "https://testu:testp@httpbin.org/basic-auth/testu/testp", max_age=-1)
+            self.assertResponse(resp, Response)
+            self.assertTrue(resp.status_code, 200)
+
+    @mock_response()
+    def test_auth_acc_request_auth(self):
+        """Check that only the auth credentials passed to the request are used. Ignore session and netloc auth."""
+        with urlquick.Session() as session:
+            session.auth = ("ufail", "pfail")  # Should be ignored
+            resp = session.request(u"GET", "https://ufail:pfail@httpbin.org/basic-auth/testu/testp", auth=("testu", "testp"), max_age=-1)
+            self.assertResponse(resp, Response)
+            self.assertTrue(resp.status_code, 200)
 
     @mock_response()
     def test_auth_session_fail(self):
