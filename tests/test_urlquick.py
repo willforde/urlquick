@@ -13,6 +13,7 @@ import io
 import time
 import zlib
 import logging
+import ssl
 
 from functools import wraps
 
@@ -593,8 +594,14 @@ class TestRequest(unittest.TestCase):
             self.assertIsInstance(key, str)
             self.assertIsInstance(value, str)
 
+    def test_invalid_scheme(self):
+        with self.assertRaisesRegexp(ValueError, "Unsupported scheme"):
+            urlquick.Request("GET", "htsp://httpbin.org/get", urlquick.CaseInsensitiveDict())
+
 
 class TestConnectionManager(unittest.TestCase):
+    org_HTTPConnection = org_HTTPSConnection = None
+
     class Response(object):
         will_close = False
 
@@ -633,115 +640,104 @@ class TestConnectionManager(unittest.TestCase):
         cls.org_HTTPSConnection = urlquick.HTTPSConnection
         urlquick.HTTPConnection = cls.HTTPConnection
         urlquick.HTTPSConnection = cls.HTTPConnection
-        cls.conn = urlquick.ConnectionManager()
 
     @classmethod
     def tearDownClass(cls):
         urlquick.HTTPConnection = cls.org_HTTPConnection
         urlquick.HTTPSConnection = cls.org_HTTPSConnection
 
-    def tearDown(self):
-        self.conn._connections = {u"http": {}, u"https": {}}
-
-    def test_start_conn(self):
+    def test_connect(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        conn = self.HTTPConnection()
-        ret = self.conn.connect(conn, req)
-        self.assertIsInstance(ret, self.Response)
+        cm = urlquick.ConnectionManager()
+        resp = cm.connect(req, 10)
 
-    def test_start_conn_timeout(self):
+        self.assertIsInstance(resp, self.Response)
+        self.assertTrue("httpbin.org" in cm.request_handler["https"][1])
+        self.assertIsInstance(cm.request_handler["https"][1]["httpbin.org"], self.HTTPConnection)
+
+    def test_connect_will_close(self):
+        req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
+        self.Response.will_close = True
+        try:
+            cm = urlquick.ConnectionManager()
+            resp = cm.connect(req, 10)
+
+            self.assertIsInstance(resp, self.Response)
+            self.assertFalse("httpbin.org" in cm.request_handler["https"][1])
+        finally:
+            self.Response.will_close = False
+
+    def test_connect_reuse_good(self):
+        req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
+        cm = urlquick.ConnectionManager()
+        cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection()
+        resp = cm.connect(req, 10)
+        self.assertIsInstance(resp, self.Response)
+
+    def test_connect_reuse_bad(self):
+        req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
+        cm = urlquick.ConnectionManager()
+        cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection(fail=urlquick.HTTPException)
+        self.Response.will_close = True
+        try:
+            resp = cm.connect(req, 10)
+            self.assertIsInstance(resp, self.Response)
+            self.assertFalse("httpbin.org" in cm.request_handler["https"][1])
+        finally:
+            self.Response.will_close = False
+
+    def test_connect_reuse_ugly(self):
+        req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
+        cm = urlquick.ConnectionManager()
+        cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection(fail=RuntimeError)
+        with self.assertRaises(RuntimeError):
+            cm.connect(req, 10)
+
+    def test_send_request(self):
+        conn = self.HTTPConnection()
+        cm = urlquick.ConnectionManager()
+        headers = {u"Accept-Encoding": u"gzip, deflate"}
+        req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict(headers), data="testing")
+        resp = cm.send_request(conn, req)
+        self.assertIsInstance(resp, self.Response)
+        self.assertTrue("Accept-Encoding".lower() in conn.headers)
+        self.assertEqual(conn.method, "GET")
+        self.assertEqual(conn.selector, "/get")
+        self.assertEqual(conn.data, b"testing")
+
+    def test_send_request_raises_timeout(self):
+        cm = urlquick.ConnectionManager()
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
         conn = self.HTTPConnection(fail=socket.timeout)
         with self.assertRaises(urlquick.Timeout):
-            self.conn.connect(conn, req)
+            cm.send_request(conn, req)
 
-    def test_start_conn_error(self):
+    def test_send_request_raises_socketerror(self):
+        cm = urlquick.ConnectionManager()
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
         conn = self.HTTPConnection(fail=socket.error)
         with self.assertRaises(urlquick.ConnError):
-            self.conn.connect(conn, req)
+            cm.send_request(conn, req)
 
-    def test_reuse_conn(self):
+    def test_send_request_raises_sslerror(self):
+        cm = urlquick.ConnectionManager()
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        conn = self.HTTPConnection()
-        ret = self.conn.reuse_connection(conn, req)
-        self.assertIsInstance(ret, self.Response)
+        conn = self.HTTPConnection(fail=ssl.SSLError)
+        with self.assertRaises(urlquick.ConnError):
+            cm.send_request(conn, req)
 
-    def test_reuse_conn_error(self):
+    def test_send_request_raises_httperror(self):
+        cm = urlquick.ConnectionManager()
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        conn = self.HTTPConnection(fail=socket.error)
-        ret = self.conn.reuse_connection(conn, req)
-        self.assertIsNone(ret)
-
-    def test_send_headers_only(self):
-        headers = urlquick.CaseInsensitiveDict({u"Accept-Encoding": u"gzip, deflate"})
-        req = urlquick.Request("GET", "https://httpbin.org/get", headers)
-        conn = self.HTTPConnection()
-        ret = self.conn.send_request(conn, req)
-        self.assertIsInstance(ret, self.Response)
-        self.assertTrue("Accept-Encoding".lower() in conn.headers)
-
-    def test_send_putrequest_only(self):
-        req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        conn = self.HTTPConnection()
-        ret = self.conn.send_request(conn, req)
-        self.assertIsInstance(ret, self.Response)
-        self.assertEqual(conn.method, "GET")
-        self.assertEqual(conn.selector, "/get")
-
-    def test_send_data_only(self):
-        req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict(), data="holy shit")
-        conn = self.HTTPConnection()
-        ret = self.conn.send_request(conn, req)
-        self.assertIsInstance(ret, self.Response)
-        self.assertEqual(conn.data, b"holy shit")
-
-    def test_request_http(self):
-        req = urlquick.Request("GET", "http://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        self.conn.request(req, 10)
-        self.assertTrue("httpbin.org" in self.conn._connections["http"])
-        self.assertIsInstance(self.conn._connections["http"]["httpbin.org"], self.HTTPConnection)
-
-    def test_request_https(self):
-        req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        self.conn.request(req, 10)
-        self.assertTrue("httpbin.org" in self.conn._connections["https"])
-        self.assertIsInstance(self.conn._connections["https"]["httpbin.org"], self.HTTPConnection)
-
-    def test_request_will_close(self):
-        req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        self.Response.will_close = True
-        self.conn.request(req, 10)
-        self.assertTrue("httpbin.org" not in self.conn._connections["https"])
-        self.Response.will_close = False
-
-    def test_request_bad(self):
-        req = urlquick.Request("GET", "bad://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        with self.assertRaises(urlquick.UrlError):
-            self.conn.request(req, 10)
-
-    def test_reuse_good(self):
-        conn = self.HTTPConnection()
-        self.conn._connections = {u"http": {"httpbin.org": conn}, u"https": {}}
-        req = urlquick.Request("GET", "http://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        self.conn.request(req, 10)
-        self.assertTrue("httpbin.org" in self.conn._connections["http"])
-        self.assertIsInstance(self.conn._connections["http"]["httpbin.org"], self.HTTPConnection)
-
-    def test_reuse_bad(self):
         conn = self.HTTPConnection(fail=urlquick.HTTPException)
-        self.conn._connections = {u"http": {"httpbin.org": conn}, u"https": {}}
-        req = urlquick.Request("GET", "http://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        self.conn.request(req, 10)
-        self.assertTrue("httpbin.org" in self.conn._connections["http"])
-        self.assertIsInstance(self.conn._connections["http"]["httpbin.org"], self.HTTPConnection)
+        with self.assertRaises(urlquick.ConnError):
+            cm.send_request(conn, req)
 
-    def test_reuse_real_bad(self):
-        conn = self.HTTPConnection(fail=RuntimeError)
-        self.conn._connections = {u"http": {"httpbin.org": conn}, u"https": {}}
-        req = urlquick.Request("GET", "http://httpbin.org/get", urlquick.CaseInsensitiveDict())
-        with self.assertRaises(RuntimeError):
-            self.conn.request(req, 10)
+    def test_close_connections(self):
+        cm = urlquick.ConnectionManager()
+        cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection()
+        cm.close()
+        self.assertFalse(cm.request_handler["https"][1])
 
 
 def create_resp(body=b"", headers=None, status=200, reason="OK"):
@@ -1111,8 +1107,6 @@ class TestSession(unittest.TestCase):
         with urlquick.Session() as session:
             resp = session.request(u"GET", "https://httpbin.org/get", max_age=14440)
             self.assertResponse(resp, urlquick.CacheResponse)
-            # x-max-age should be removed in the cache check
-            self.assertTrue("x-max-age" not in resp.request.headers)
 
     @mock_response()
     def test_max_age_session(self):
@@ -1120,15 +1114,12 @@ class TestSession(unittest.TestCase):
             session.max_age = 14440
             resp = session.request(u"GET", "https://httpbin.org/get")
             self.assertResponse(resp, urlquick.CacheResponse)
-            # x-max-age should be removed in the cache check
-            self.assertTrue("x-max-age" not in resp.request.headers)
 
     @mock_response()
     def test_disable_max_age_local(self):
         with urlquick.Session() as session:
             resp = session.request(u"GET", "https://httpbin.org/get", max_age=-1)
             self.assertResponse(resp, Response)
-            self.assertTrue("x-max-age" not in resp.request.headers)
 
     @mock_response()
     def test_disable_max_age_local(self):
@@ -1136,7 +1127,6 @@ class TestSession(unittest.TestCase):
             session.max_age = -1
             resp = session.request(u"GET", "https://httpbin.org/get")
             self.assertResponse(resp, Response)
-            self.assertTrue("x-max-age" not in resp.request.headers)
 
     @mock_response()
     def test_max_age_default(self):
@@ -1152,7 +1142,6 @@ class TestSession(unittest.TestCase):
             session.max_age = None
             resp = session.request(u"GET", "https://httpbin.org/get")
             self.assertResponse(resp, Response)
-            self.assertTrue("x-max-age" not in resp.request.headers)
 
     @mock_response()
     def test_caching(self):
