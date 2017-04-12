@@ -157,6 +157,45 @@ class HTTPError(UrlError):
         return "HTTP {} Error {}: {}".format(error_type, self.code, self.msg)
 
 
+class CaseInsensitiveDict(MutableMapping):
+    """
+    A case-insensitive `dict` like object.
+
+    Credit goes to requests for this code
+    http://docs.python-requests.org/en/master/
+    """
+    def __init__(self, *args):
+        self._store = {}
+        for _dict in args:
+            if _dict:
+                self.update(_dict)
+
+    def __repr__(self):
+        return str(dict(self.items()))
+
+    def __setitem__(self, key, value):
+        if value is not None:
+            key = make_unicode(key, "ascii")
+            value = make_unicode(value, "iso-8859-1")
+            self._store[key.lower()] = (key, value)
+
+    def __getitem__(self, key):
+        return self._store[key.lower()][1]
+
+    def __delitem__(self, key):
+        del self._store[key.lower()]
+
+    def __iter__(self):
+        return (casedkey for casedkey, _ in self._store.values())
+
+    def __len__(self):
+        return len(self._store)
+
+    def copy(self):
+        """Return a shallow copy of the case-insensitive dictionary."""
+        return CaseInsensitiveDict(self._store.values())
+
+
 class CachedProperty(object):
     """
     Cached property.
@@ -408,45 +447,6 @@ class CacheResponse(object):
 
     def close(self):
         pass
-
-
-class CaseInsensitiveDict(MutableMapping):
-    """
-    A case-insensitive `dict` like object.
-
-    Credit goes to requests for this code
-    http://docs.python-requests.org/en/master/
-    """
-    def __init__(self, *args):
-        self._store = {}
-        for _dict in args:
-            if _dict:
-                self.update(_dict)
-
-    def __repr__(self):
-        return str(dict(self.items()))
-
-    def __setitem__(self, key, value):
-        if value is not None:
-            key = make_unicode(key, "ascii")
-            value = make_unicode(value, "iso-8859-1")
-            self._store[key.lower()] = (key, value)
-
-    def __getitem__(self, key):
-        return self._store[key.lower()][1]
-
-    def __delitem__(self, key):
-        del self._store[key.lower()]
-
-    def __iter__(self):
-        return (casedkey for casedkey, _ in self._store.values())
-
-    def __len__(self):
-        return len(self._store)
-
-    def copy(self):
-        """Return a shallow copy of the case-insensitive dictionary."""
-        return CaseInsensitiveDict(self._store.values())
 
 
 class ConnectionManager(CacheAdapter):
