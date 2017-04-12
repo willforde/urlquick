@@ -521,9 +521,10 @@ class ConnectionManager(CacheAdapter):
             raise ConnError(e)
 
     def close(self):
-        """Close all persistent connections."""
+        """Close all persistent connections and remove."""
         for _, pool in self.request_handler.values():
-            for conn in pool.values():
+            for key in list(pool.keys()):
+                conn = pool.pop(key)
                 conn.close()
 
 
