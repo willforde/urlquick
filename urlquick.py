@@ -915,7 +915,7 @@ class Session(ConnectionManager):
 
         :return: A requests like :class:`Response <urlquick.Response>` object
         :rtype: urlquick.Response
-        
+
         :raises MaxRedirects: If too many redirects was detected.
         :raises ConnError: If connection to server failed.
         :raises HTTPError: If response status is greater or equal to 400 and raise_for_status is `True`.
