@@ -1262,10 +1262,24 @@ class TestSession(unittest.TestCase):
             self.assertEqual(resp.status_code, 401)
 
     @mock_response()
-    def test_auth(self):
+    def test_auth_local(self):
         with urlquick.Session() as session:
             resp = session.request(u"GET", "https://httpbin.org/basic-auth/testu/testp", auth=("testu", "testp"), max_age=-1)
             self.assertResponse(resp, Response)
+
+    @mock_response()
+    def test_auth_session(self):
+        with urlquick.Session() as session:
+            session.auth = ("testu", "testp")
+            self.assertTupleEqual(session.auth, ("testu", "testp"))
+            resp = session.request(u"GET", "https://httpbin.org/basic-auth/testu/testp", max_age=-1)
+            self.assertResponse(resp, Response)
+
+    @mock_response()
+    def test_auth_session_fail(self):
+        with urlquick.Session() as session:
+            with self.assertRaises(ValueError):
+                session.auth = "testu"
 
     @mock_response()
     def test_redirect(self):
