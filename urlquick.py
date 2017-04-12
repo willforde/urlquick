@@ -347,9 +347,9 @@ class CacheAdapter(object):
     def __init__(self):
         self.__cache = None
 
-    def cache_check(self, method, url, data, headers):
+    def cache_check(self, method, url, data, headers, max_age=None):
         # Fetch max age from request header
-        max_age = int(headers.pop(u"x-max-age", MAX_AGE))
+        max_age = max_age if max_age is not None else int(headers.pop(u"x-max-age", MAX_AGE))
         url_hash = CacheHandler.hash_url(url, data)
         if method == u"OPTIONS":
             return None
@@ -449,77 +449,81 @@ class CaseInsensitiveDict(MutableMapping):
         return CaseInsensitiveDict(self._store.values())
 
 
-class ConnectionManager(object):
-    """Manage concurrent http connections"""
+class ConnectionManager(CacheAdapter):
     def __init__(self):
-        self._connections = {u"http": {}, u"https": {}}
+        self.request_handler = {"http": (HTTPConnection, {}), "https": (HTTPSConnection, {})}
+        super(ConnectionManager, self).__init__()
 
-    def reuse_connection(self, *args):
-        """Reuse the saved connection."""
-        try:
-            return self.connect(*args)
-        except UrlError:
-            return None
+    def make_request(self, req, timeout, max_age):
+        # Only check cache if max_age set to a valid value
+        if max_age >= 0:
+            cached_resp = self.cache_check(req.method, req.url, req.data, req.headers, max_age=max_age)
+            if cached_resp:
+                return cached_resp
 
-    def connect(self, *args):
-        try:
-            return self.send_request(*args)
-        except socket.timeout as e:
-            raise Timeout(e)
-        except ssl.SSLError as e:
-            raise SSLError(e)
-        except (socket.error, HTTPException) as e:
-            raise ConnError(e)
+            # Request resource and cache it if possible
+            resp = self.connect(req, timeout)
+            callback = lambda: (resp.getheaders(), resp.read(), resp.status, resp.reason)
+            cached_resp = self.handle_response(req.method, resp.status, callback)
+            if cached_resp:
+                return cached_resp
+            else:
+                return resp
+
+        # Default to un-cached response
+        return self.connect(req, timeout)
+
+    def connect(self, req, timeout):
+        # Fetch connection from pool and attempt to reuse if available
+        Connection, pool = self.request_handler[req.type]
+        if req.host in pool:
+            try:
+                return self.send_request(pool[req.host], req)
+            except Exception as e:
+                # Remove the connection from the pool as it's unusable
+                pool[req.host].close()
+                del pool[req.host]
+
+                # Raise the exception if it's not a subclass of UrlError
+                if not isinstance(e, UrlError):
+                    raise
+
+        # Create a new connection
+        conn = Connection(req.host, timeout=timeout)
+        response = self.send_request(conn, req)
+
+        # Add connection to the pool if the response is not set to close
+        if not response.will_close:
+            pool[req.host] = conn
+        return response
 
     @staticmethod
     def send_request(conn, req):
-        conn.putrequest(str(req.method), str(req.selector), skip_host=1, skip_accept_encoding=1)
+        try:
+            # Setup request
+            conn.putrequest(str(req.method), str(req.selector), skip_host=1, skip_accept_encoding=1)
 
-        # Add headers to request
-        for hdr, value in req.header_items():
-            conn.putheader(hdr, value)
+            # Add all headers to request
+            for hdr, value in req.header_items():
+                conn.putheader(hdr, value)
 
-        # Convert data to bytes before sending
-        conn.endheaders(req.data)
+            # Send the body of the request witch will initiate the connection
+            conn.endheaders(req.data)
+            return conn.getresponse()
 
-        # return the response
-        return conn.getresponse()
+        except socket.timeout as e:
+            raise Timeout(e)
 
-    def request(self, req, timeout):
-        if req.type in self._connections:
-            connections = self._connections[req.type]
-        else:
-            raise ConnError("Unsupported scheme: {}".format(req.type))
+        except ssl.SSLError as e:
+            raise SSLError(e)
 
-        host = str(req.host)
-        response = None
-
-        if host in connections:
-            conn = connections[host]
-            try:
-                # noinspection PyTypeChecker
-                response = self.reuse_connection(conn, req)
-            except Exception:
-                del connections[host]
-                conn.close()
-                raise
-
-        if response is None:
-            if req.type == u"https":
-                conn = HTTPSConnection(host, timeout=timeout)
-            else:
-                conn = HTTPConnection(host, timeout=timeout)
-
-            response = self.connect(conn, req)
-            if not response.will_close:
-                connections[host] = conn
-
-        return response
+        except (socket.error, HTTPException) as e:
+            raise ConnError(e)
 
     def close(self):
-        """Close all persistent connection."""
-        for scheme in self._connections.values():
-            for conn in scheme.values():
+        """Close all persistent connections."""
+        for _, pool in self.request_handler.values():
+            for conn in pool.values():
                 conn.close()
 
 
@@ -599,6 +603,8 @@ class Request(object):
 
         # Parse the url into each element
         scheme, netloc, path, query, _ = urlsplit(url, scheme=scheme)
+        if not scheme in ("http", "https"):
+            raise ValueError("Unsupported scheme: {}".format(scheme))
 
         # Insure that all element of the url can be encoded into ascii
         self.auth, netloc = self._ascii_netloc(netloc)
@@ -698,7 +704,7 @@ def make_unicode(data, encoding="utf8", errors=""):
 # ########################## Public API ##########################
 
 
-class Session(CacheAdapter):
+class Session(ConnectionManager):
     """
     Provides cookie persistence, connection-pooling, and configuration.
 
@@ -932,8 +938,6 @@ class Session(CacheAdapter):
 
         # Fetch max age of cache
         max_age = (-1 if self.max_age is None else self.max_age) if max_age is None else max_age
-        if max_age >= 0:
-            reqHeaders["x-max-age"] = max_age
 
         # Parse url into it's individual components including params if given
         req = Request(method, url, reqHeaders, data, json, reqParams, reqCookies)
@@ -951,21 +955,8 @@ class Session(CacheAdapter):
 
         while True:
             # Send a request for resource
-            if max_age >= 0:
-                cached_response = self.cache_check(req.method, req.url, req.data, req.headers)
-                if cached_response:
-                    resp = Response(cached_response, req, start_time, history[:])
-                else:
-                    raw_resp = self._cm.request(req, timeout)
-                    callback = lambda: (raw_resp.getheaders(), raw_resp.read(), raw_resp.status, raw_resp.reason)
-                    cached_response = self.handle_response(req.method, raw_resp.status, callback)
-                    if cached_response:
-                        resp = Response(cached_response, req, start_time, history[:])
-                    else:
-                        resp = Response(raw_resp, req, start_time, history[:])
-            else:
-                raw_resp = self._cm.request(req, timeout)
-                resp = Response(raw_resp, req, start_time, history[:])
+            raw_resp = self.make_request(req, timeout, max_age)
+            resp = Response(raw_resp, req, start_time, history[:])
 
             visited[req.url] += 1
             # Process the response
@@ -996,10 +987,6 @@ class Session(CacheAdapter):
                 return resp
             else:
                 return resp
-
-    def close(self):
-        """Close all persistent connections."""
-        self._cm.close()
 
     def __enter__(self):
         return self
