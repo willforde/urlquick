@@ -550,7 +550,7 @@ class Request(object):
         #: The original URL passed to the constructor.
         self.url = urlunsplit((urlparts.scheme, urlparts.netloc, urlparts.path, urlparts.query, urlparts.fragment))
         #: The URI authority, typically a host, but may also contain a port separated by a colon.
-        self.host = urlparts.netloc
+        self.host = urlparts.netloc.lower()
 
         # Add Referer header if not the original request
         if referer:
