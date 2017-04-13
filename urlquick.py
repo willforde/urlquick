@@ -204,11 +204,9 @@ class CachedProperty(object):
     itself with an ordinary attribute. Deleting the attribute resets the
     property.
     """
-
-    def __init__(self, fget=None, fset=None, doc=None):
+    def __init__(self, fget=None):
         self.__get = fget
-        self.__set = fset
-        self.__doc__ = doc or fget.__doc__
+        self.__doc__ = fget.__doc__
         self.__name__ = fget.__name__
         self.__module__ = fget.__module__
 
@@ -220,15 +218,10 @@ class CachedProperty(object):
             return value
 
     def __set__(self, instance, value):
-        if self.__set is None:
-            raise AttributeError("Can't set attribute")
         instance.__dict__[self.__name__] = value
 
     def __delete__(self, instance):
         instance.__dict__.pop(self.__name__, None)
-
-    def setter(self, fset):
-        return type(self)(self.__get, fset, doc=self.__doc__)
 
 
 class CacheHandler(object):
@@ -1069,11 +1062,6 @@ class Response(object):
                     _, value = sec.split(u"=", 1)
                     return value.strip()
 
-    @encoding.setter
-    def encoding(self, value):
-        """Exists here to enable CachedProperty's setter"""
-        pass
-
     @CachedProperty
     def content(self):
         """
@@ -1097,7 +1085,6 @@ class Response(object):
         except (IOError, zlib.error) as e:
             raise ContentError("Failed to decompress content body: {}".format(e))
 
-    # noinspection PyPropertyAccess
     @CachedProperty
     def text(self):
         """Content of the response, as unicode."""
