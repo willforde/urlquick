@@ -58,13 +58,33 @@ class TestMisc(unittest.TestCase):
         # Test the a seccond request returns the same value
         self.assertEqual(work.worker, ret)
 
-        # Test the a new value is return when cache is deleted
+        # Test that a new value is return when cache is deleted
         del work.worker
         self.assertNotEqual(work.worker, ret)
 
         # Test that the setter failes as setter was not enabled
         with self.assertRaises(AttributeError):
             work.worker = 321
+
+    def test_cache_property_setter(self):
+        class Cache(object):
+            @urlquick.CachedProperty
+            def worker(self):
+                return random()
+
+            # Enable setter
+            worker.allow_setter = True
+
+        work = Cache()
+        # Test the setter works and does not raise AttributeError
+        work.worker = 321
+
+        # Now test that the value that is returned is what was set and not a random one.
+        self.assertEqual(work.worker, 321)
+
+        # Test that a new value is return when cache is deleted
+        del work.worker
+        self.assertNotEqual(work.worker, 321)
 
     def test_UnicodeDict(self):
         test_dict1 = {u"test1": u"work1", "test2": "work2", "num": 3}

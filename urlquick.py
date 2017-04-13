@@ -209,6 +209,7 @@ class CachedProperty(object):
         self.__doc__ = fget.__doc__
         self.__name__ = fget.__name__
         self.__module__ = fget.__module__
+        self.allow_setter = False
 
     def __get__(self, instance, owner):
         try:
@@ -216,6 +217,12 @@ class CachedProperty(object):
         except KeyError:
             value = instance.__dict__[self.__name__] = self.__get(instance)
             return value
+
+    def __set__(self, instance, value):
+        if self.allow_setter:
+            instance.__dict__[self.__name__] = value
+        else:
+            raise AttributeError("Can't set attribute")
 
     def __delete__(self, instance):
         instance.__dict__.pop(self.__name__, None)
@@ -1058,6 +1065,9 @@ class Response(object):
                 if sec.startswith(u"charset"):
                     _, value = sec.split(u"=", 1)
                     return value.strip()
+
+    # Allow encoding property to be set by the user
+    encoding.allow_setter = True
 
     @CachedProperty
     def content(self):
