@@ -811,11 +811,6 @@ class TestResponse(unittest.TestCase):
     def test_encoding_without_charset(self, resp):
         self.assertIsNone(resp.encoding)
 
-    @create_resp(headers={"Content-Type": "text/html"})
-    def test_encoding_setter(self, resp):
-        resp.encoding = "utf-8"
-        self.assertEqual(resp.encoding, "utf-8")
-
     @create_resp(b"data")
     def test_content_basic(self, resp):
         self.assertIsInstance(resp.content, bytes)
