@@ -9,9 +9,6 @@ Welcome to urlquick's documentation!
 .. include::
     ../README.rst
 
-.. seealso::
-    More examples can be found in `examples.py`_.
-
 API
 ===
 
@@ -56,5 +53,3 @@ Request Object
 --------------
 .. autoclass:: urlquick.Request
     :members:
-
-.. _examples.py: https://github.com/willforde/python-htmlement/blob/master/examples.py

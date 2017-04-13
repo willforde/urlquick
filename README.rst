@@ -13,8 +13,14 @@
 .. image:: https://api.codacy.com/project/badge/Grade/25951f521ebd4534ae64c725e0be9441
     :target: https://www.codacy.com/app/willforde/urlquick?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=willforde/urlquick&amp;utm_campaign=Badge_Grade
 
-.. image:: http://badge.kloud51.com/pypi/py_versions/urlquick.svg
+.. image:: https://img.shields.io/pypi/pyversions/urlquick.svg
     :target: https://pypi.python.org/pypi/urlquick
+
+.. image:: https://img.shields.io/pypi/l/urlquick.svg
+    :target: https://pypi.python.org/pypi/urlquick
+
+.. image:: https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg
+   :target: https://saythanks.io/to/willforde
 
 Urlquick
 --------
@@ -56,18 +62,20 @@ Usage
 -----
 
 Urlquick is fairly similar to the requests library but only implements more top level methods like get, post and put.
-The Session class is also implemented but in a more limited form. And the response object is fully compatible with the requests response object. ::
+The Session class is also implemented but in a more limited form. And the response object is fully comparable with the requests response object. ::
 
     >>> import urlquick
-    >>> r = urlquick.get('https://api.github.com/user', auth=('user', 'pass'))
+    >>> r = urlquick.get('https://api.github.com/events')
     >>> r.status_code
     200
     >>> r.headers['content-type']
-    'application/json; charset=utf8'
+    'text/html; charset=utf-8'
     >>> r.encoding
     'utf-8'
+    >>> r.content
+    b'[{"repository":{"open_issues":0,"url":"https://github.com/...
     >>> r.text
-    u'{"type":"User"...'
+    u'[{"repository":{"open_issues":0,"url":"https://github.com/...
     >>> r.json()
-    {u'private_gists': 419, u'total_private_repos': 77, ...}
+    [{u'repository': {u'open_issues': 0, u'url': 'https://github.com/...
 
