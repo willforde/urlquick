@@ -217,9 +217,6 @@ class CachedProperty(object):
             value = instance.__dict__[self.__name__] = self.__get(instance)
             return value
 
-    def __set__(self, instance, value):
-        instance.__dict__[self.__name__] = value
-
     def __delete__(self, instance):
         instance.__dict__.pop(self.__name__, None)
 

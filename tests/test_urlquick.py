@@ -14,7 +14,7 @@ import time
 import zlib
 import logging
 import ssl
-
+from random import random
 from functools import wraps
 
 from collections import OrderedDict, defaultdict
@@ -48,19 +48,23 @@ class TestMisc(unittest.TestCase):
         class Cache(object):
             @urlquick.CachedProperty
             def worker(self):
-                return "yes"
+                return random()
 
         work = Cache()
-        # Check that worker returns the default value 'yes'
-        self.assertEqual(work.worker, "yes")
-        # Check that we can still access the value
-        self.assertEqual(work.worker, "yes")
-        # Check that worker gets changed to 'no'
-        work.worker = "no"
-        self.assertEqual(work.worker, "no")
-        # Check that worker is set back to default after deleting the property
+        # Test that working return a random float
+        ret = work.worker
+        self.assertTrue(0 < ret < 1)
+
+        # Test the a seccond request returns the same value
+        self.assertEqual(work.worker, ret)
+
+        # Test the a new value is return when cache is deleted
         del work.worker
-        self.assertEqual(work.worker, "yes")
+        self.assertNotEqual(work.worker, ret)
+
+        # Test that the setter failes as setter was not enabled
+        with self.assertRaises(AttributeError):
+            work.worker = 321
 
     def test_UnicodeDict(self):
         test_dict1 = {u"test1": u"work1", "test2": "work2", "num": 3}
