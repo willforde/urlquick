@@ -899,7 +899,7 @@ class Session(ConnectionManager):
         """
         Make request for online resource.
 
-        :param method: HTTP request method, 'GET', 'HEAD', 'POST'.
+        :param str method: HTTP request method, 'GET', 'HEAD', 'POST'.
         :param str url: Url of the remote resource.
         :param dict params: (optional) Dictionary of url query key/value pairs.
         :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
@@ -910,7 +910,7 @@ class Session(ConnectionManager):
         :param int timeout: (optional) Timeout in seconds.
         :param bool allow_redirects: (optional) Boolean. Enable/disable redirection. Defaults to ``True``.
         :param bool raise_for_status: (optional) Raise HTTPError if status code is > 400. Defaults to ``False``.
-        :param int max_age: Max age the cache can be before it's considered stale. -1 will disable caching.
+        :param int max_age: (optional) Max age the cache can be before it's considered stale. -1 will disable caching.
                             Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
 
         :return: A requests like :class:`Response <urlquick.Response>` object
@@ -1053,7 +1053,7 @@ class Response(object):
 
     @CachedProperty
     def encoding(self):
-        """Encoding to decode with when accessing resp.text."""
+        """Encoding to decode with when accessing :meth:`resp.text <urlquick.Response.text>`."""
         if u"Content-Type" in self._headers:
             header = self._headers[u"Content-Type"]
             for sec in header.split(u";"):
@@ -1259,7 +1259,7 @@ def request(method, url, params=None, data=None, json=None, headers=None, cookie
     """
     Make request for online resource.
 
-    :param method: HTTP request method, 'GET', 'HEAD', 'POST'.
+    :param str method: HTTP request method, 'GET', 'HEAD', 'POST'.
     :param str url: Url of the remote resource.
     :param dict params: (optional) Dictionary of url query key/value pairs.
     :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
@@ -1270,7 +1270,7 @@ def request(method, url, params=None, data=None, json=None, headers=None, cookie
     :param int timeout: (optional) Timeout in seconds.
     :param bool allow_redirects: (optional) Boolean. Enable/disable redirection. Defaults to ``True``.
     :param bool raise_for_status: (optional) Raise HTTPError if status code is > 400. Defaults to ``False``.
-    :param int max_age: Max age the cache can be before it's considered stale. -1 will disable caching.
+    :param int max_age: (optional) Max age the cache can be before it's considered stale. -1 will disable caching.
                         Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
 
     :return: A requests like :class:`Response <urlquick.Response>` object
