@@ -109,7 +109,7 @@ __repo__ = "https://github.com/willforde/urlquick"
 __copyright__ = "Copyright (C) 2017 William Forde"
 __author__ = "William Forde"
 __license__ = "GPLv3"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # Cacheable request types
 CACHEABLE_METHODS = (u"GET", u"HEAD", u"POST")

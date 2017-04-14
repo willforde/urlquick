@@ -11,7 +11,7 @@ def readme():
 
 
 setup(name='urlquick',
-      version='0.1.0',
+      version='0.1.1',
       description='A light-weight http client with requests like interface. Featuring persistent connections and caching support.',
       long_description=readme(),
       keywords='url lightweight caching http-client requests',
