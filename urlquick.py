@@ -291,8 +291,7 @@ class CacheHandler(object):
 
     def update(self, headers, body, status, reason, version=11, strict=True):
         # Convert headers into a Case Insensitive Dict
-        if not isinstance(headers, CaseInsensitiveDict):
-            headers = CaseInsensitiveDict(headers)
+        headers = CaseInsensitiveDict(headers)
 
         # Remove Transfer-Encoding from header if exists
         if u"Transfer-Encoding" in headers:
@@ -325,6 +324,7 @@ class CacheHandler(object):
 
         # Decode body content using base64
         json_data[u"body"] = b64decode(json_data[u"body"].encode("ascii"))
+        json_data[u"headers"] = CaseInsensitiveDict(json_data[u"headers"])
         return CacheResponse(**json_data)
 
     def _save(self, **response):
@@ -435,23 +435,21 @@ class CacheAdapter(object):
 
 
 class CacheResponse(object):
+    """A mock HTTPResponse class"""
     def __init__(self, headers, body, status, reason, version=11, strict=True):
-        # Convert headers into a Case Insensitive Dict
-        if isinstance(headers, CaseInsensitiveDict):
-            self.headers = headers
-        else:
-            self.headers = CaseInsensitiveDict(headers)
-
-        self.body = body
+        self.headers = headers
         self.status = status
         self.reason = reason
         self.version = version
         self.strict = strict
+        self.body = body
 
     def getheaders(self):
+        """Return the response headers"""
         return self.headers
 
     def read(self):
+        """Return the body of the response"""
         return self.body
 
     def close(self):
