@@ -16,9 +16,6 @@
 .. image:: https://img.shields.io/pypi/pyversions/urlquick.svg
     :target: https://pypi.python.org/pypi/urlquick
 
-.. image:: https://img.shields.io/pypi/l/urlquick.svg
-    :target: https://pypi.python.org/pypi/urlquick
-
 .. image:: https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg
    :target: https://saythanks.io/to/willforde
 
