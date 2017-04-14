@@ -112,6 +112,7 @@ __license__ = "GPLv3"
 __version__ = "0.1.1"
 
 # Cacheable request types
+CACHE_LOCATION = os.getcwd()
 CACHEABLE_METHODS = (u"GET", u"HEAD", u"POST")
 CACHEABLE_CODES = (200, 203, 204, 300, 301, 302, 303, 307, 308, 410, 414)
 REDIRECT_CODES = (301, 302, 303, 307, 308)
@@ -241,8 +242,7 @@ class CacheHandler(object):
 
     @staticmethod
     def cache_dir():
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        cache_dir = os.path.join(current_dir, ".cache")
+        cache_dir = os.path.join(CACHE_LOCATION, ".cache")
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
         return cache_dir

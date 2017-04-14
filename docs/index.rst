@@ -13,6 +13,9 @@ API
 ===
 
 .. autodata:: urlquick.MAX_AGE
+.. data:: urlquick.CACHE_LOCATION
+
+    Location to store the cache files. Defaults to current working directory. Will create a ".cache" subdirectory.
 
 .. autofunction:: urlquick.request
 .. autofunction:: urlquick.get
