@@ -416,13 +416,13 @@ class TestCacheHandler(unittest.TestCase):
     def test_cleanup_no_max_age(self):
         with self.create("https://httpbin.org/get") as cache:
             # Check that no error is raised
-            urlquick.CacheHandler.cleanup(0)
+            urlquick.cache_cleanup(0)
             self.assertFalse(os.path.exists(cache.cache_path))
 
     def test_cleanup_max_age(self):
         with self.create("https://httpbin.org/get") as cache:
             # Check that no error is raised
-            urlquick.CacheHandler.cleanup(99999999)
+            urlquick.cache_cleanup(99999999)
             self.assertTrue(os.path.exists(cache.cache_path))
 
     def test_cache_check_fresh(self):
