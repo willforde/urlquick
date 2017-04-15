@@ -1,4 +1,4 @@
-.. image:: https://readthedocs.org/projects/urlquick/badge/?version=latest
-    :target: http://urlquick.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/urlquick/badge/?version=stable
+    :target: http://urlquick.readthedocs.io/en/stable/?badge=stable
 
-Please GOTO: http://urlquick.readthedocs.io/en/latest/?badge=latest
+Please GOTO: http://urlquick.readthedocs.io/en/stable/?badge=stable

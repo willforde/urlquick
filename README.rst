@@ -1,8 +1,8 @@
 .. image:: https://badge.fury.io/py/urlquick.svg
     :target: https://pypi.python.org/pypi/urlquick
 
-.. image:: https://readthedocs.org/projects/urlquick/badge/?version=latest
-    :target: http://urlquick.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/urlquick/badge/?version=stable
+    :target: http://urlquick.readthedocs.io/en/stable/?badge=stable
 
 .. image:: https://travis-ci.org/willforde/urlquick.svg?branch=master
     :target: https://travis-ci.org/willforde/urlquick
