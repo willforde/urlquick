@@ -56,3 +56,9 @@ Request Object
 --------------
 .. autoclass:: urlquick.Request
     :members:
+
+External Links
+==============
+Requests Quickstart: http://docs.python-requests.org/en/master/user/quickstart/
+
+Bug Tracker: https://github.com/willforde/urlquick/issues
