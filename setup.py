@@ -1,6 +1,7 @@
 from setuptools import setup
 from codecs import open as _open
 from os import path
+import re
 
 
 def readme():
@@ -10,8 +11,19 @@ def readme():
         return opened_file.read()
 
 
+def version(name):
+    with open(name, 'rb') as opened:
+        search_refind = b'__version__ = ["\'](\d+\.\d+\.\d+)["\']'
+        verdata = re.search(search_refind, opened.read())
+        if verdata:
+            data = verdata.group(1)
+            return data.decode()
+        else:
+            raise RuntimeError("Unable to extract version number")
+
+
 setup(name='urlquick',
-      version='0.1.2',
+      version=version('urlquick.py'),
       description='A light-weight http client with requests like interface. Featuring persistent connections and caching support.',
       long_description=readme(),
       keywords='url lightweight caching http-client requests',
