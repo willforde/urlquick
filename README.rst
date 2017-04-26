@@ -22,15 +22,14 @@
 Urlquick
 --------
 A light-weight http client with requests like interface. Featuring persistent connections and caching support.
-
 This project was originally created for use by Kodi add-ons, but has grown into something more.
-I found that while requests has a very nice interface, there was a noticeable lag when importing the library.
-The other option available is to use urllib2 but then you loose the benefit of persistent
-connections that requests have. Hence the reason for this project.
+I found, that while requests has a very nice interface, there was a noticeable lag when importing the library.
+The other option available is to use urllib2, but then you loose the benefit of persistent connections that requests
+have. Hence the reason for this project.
 
-All GET, HEAD and POST requests are cached locally for a period of 4 hours. When the cache expires, conditional headers
-are added to a new request e.g. 'Etag' and 'Last-modified'. Then if the server returns a 304 Not-Modified response,
-the cache is reused, saving having to re-download the content body.
+All GET, HEAD and POST requests are cached locally for a period of 4 hours. When the cache expires,
+conditional headers are added to a new request e.g. "Etag" and "Last-modified". Then if the server
+returns a 304 Not-Modified response, the cache is reused, saving having to re-download the content body.
 
 Features
 --------
@@ -58,8 +57,9 @@ Run ::
 Usage
 -----
 
-Urlquick is fairly similar to the requests library but only implements more top level methods like get, post and put.
-The Session class is also implemented but in a more limited form. And the response object is fully comparable with the requests response object. ::
+Urlquick is similar to the requests library but it only implements most top level methods
+like GET, POST and PUT. The Session class is also implemented in a more limited form.
+The response object is fully comparable with the 'requests' response object. # link request object ::
 
     >>> import urlquick
     >>> r = urlquick.get('https://api.github.com/events')

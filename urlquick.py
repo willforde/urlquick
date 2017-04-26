@@ -117,7 +117,7 @@ CACHEABLE_METHODS = (u"GET", u"HEAD", u"POST")
 CACHEABLE_CODES = (200, 203, 204, 300, 301, 302, 303, 307, 308, 410, 414)
 REDIRECT_CODES = (301, 302, 303, 307, 308)
 
-#: The default max age in seconds to use when no max age is given to request.
+#: The default max age of the cache in seconds is used when no max age is given in request.
 MAX_AGE = 14400
 
 
@@ -375,7 +375,7 @@ class CacheHandler(object):
 
 def cache_cleanup(max_age=None):
     """
-    Remove all stale cache files
+    Remove all stale cache files.
 
     :param int max_age: (optional) The max age the cache can be before removal.
                         Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
@@ -555,7 +555,7 @@ class Request(object):
         self.method = method.upper()
         #: Dictionary of HTTP headers.
         self.headers = headers = headers.copy()
-        #: The original URL passed to the constructor.
+        #: Urlencoded url of the remote resource.
         self.url = urlunsplit((urlparts.scheme, urlparts.netloc, urlparts.path, urlparts.query, urlparts.fragment))
         #: The URI authority, typically a host, but may also contain a port separated by a colon.
         self.host = urlparts.netloc.lower()
@@ -585,7 +585,7 @@ class Request(object):
                 # noinspection PyArgumentList
                 self.headers[u"Content-Length"] = unicode(len(data))
 
-        #: Request body to send to the server.
+        #: Request body, to send to the server.
         self.data = data
 
     def _parse_url(self, url, params=None, scheme=u"http"):
@@ -666,14 +666,14 @@ class Request(object):
 
     @property
     def selector(self):
-        """Return a resource selector with the url path and query parts."""
+        """Resource selector, with the url path and query parts."""
         if self._urlparts.query:
             return u"{}?{}".format(self._urlparts.path, self._urlparts.query)
         else:
             return self._urlparts.path
 
     def header_items(self):
-        """Return a list of tuples (header_name, header_value) of the Request headers as native type of :class:`str`."""
+        """Return a list of tuples (header_name, header_value) of the Request headers, as native type of :class:`str`."""
         if py3:
             return self.headers.items()
         else:
@@ -714,15 +714,15 @@ def make_unicode(data, encoding="utf8", errors=""):
 
 class Session(ConnectionManager):
     """
-    Provides cookie persistence, connection-pooling, and configuration.
+    Provides cookie persistence and connection-pooling plus configuration.
 
     :param kwargs: Default configuration for session variables.
 
     :ivar int max_repeats: Max number of repeat redirects. Defaults to `4`
     :ivar int max_redirects: Max number of redirects. Defaults to `10`
-    :ivar bool allow_redirects: Enable/disable redirection. Defaults to `True`
-    :ivar bool raise_for_status: Raise HTTPError if status code is > 400. Defaults to `False`
-    :ivar int max_age: Max age the cache can be before it's considered stale. -1 will disable caching.
+    :ivar bool allow_redirects: Enable/disable redirection. Defaults to ``True``
+    :ivar bool raise_for_status: Raise HTTPError if status code is > 400. Defaults to ``False``
+    :ivar int max_age: Max age the cache can be, before it’s considered stale. -1 will disable caching.
                        Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
     """
     def __init__(self, **kwargs):
@@ -797,8 +797,8 @@ class Session(ConnectionManager):
     @property
     def params(self):
         """
-        Dictionary of querystrings to attach to each Request. The dictionary
-        values may be lists for representing multivalued query parameters.
+        Dictionary of querystrings to attach to each Request. The dictionary values
+        may be lists for representing multivalued query parameters.
 
         :return: Session params
         :rtype: dict
@@ -818,12 +818,12 @@ class Session(ConnectionManager):
         Sends a GET request.
 
         Requests data from a specified resource.
-
+    
         :param str url: Url of the remote resource.
         :param dict params: (optional) Dictionary of url query key/value pairs.
-        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
-
-        :return: A requests like :class:`Response <urlquick.Response>` object
+        :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
+    
+        :return: A requests like Response object.
         :rtype: urlquick.Response
         """
         kwargs["params"] = params
@@ -832,13 +832,13 @@ class Session(ConnectionManager):
     def head(self, url, **kwargs):
         """
         Sends a HEAD request.
-
-        Same as GET but returns only HTTP headers with no document body.
-
+    
+        Same as GET but returns only HTTP headers and no document body.
+    
         :param str url: Url of the remote resource.
-        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
-
-        :return: A requests like :class:`Response <urlquick.Response>` object
+        :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
+    
+        :return: A requests like Response object.
         :rtype: urlquick.Response
         """
         return self.request(u"HEAD", url, **kwargs)
@@ -846,15 +846,15 @@ class Session(ConnectionManager):
     def post(self, url, data=None, json=None, **kwargs):
         """
         Sends a POST request.
-
-        Send data to a server, for example, customer information, file upload, etc.
-
+    
+        Submits data to be processed to a specified resource.
+    
         :param str url: Url of the remote resource.
-        :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
-        :param json: (optional) json data to send in the body of the Request.
-        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
-
-        :return: A requests like :class:`Response <urlquick.Response>` object
+        :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+        :param json: (optional) Json data sent in the body of the Request.
+        :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
+    
+        :return: A requests like Response object.
         :rtype: urlquick.Response
         """
         return self.request(u"POST", url, data=data, json=json, **kwargs)
@@ -862,14 +862,14 @@ class Session(ConnectionManager):
     def put(self, url, data=None, **kwargs):
         """
         Sends a PUT request.
-
-        Replaces all current representations of the target resource with the uploaded content.
-
+    
+        Uploads a representation of the specified URI.
+    
         :param str url: Url of the remote resource.
-        :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
-        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
-
-        :return: A requests like :class:`Response <urlquick.Response>` object
+        :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+        :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
+    
+        :return: A requests like Response object.
         :rtype: urlquick.Response
         """
         return self.request(u"PUT", url, data=data, **kwargs)
@@ -877,12 +877,12 @@ class Session(ConnectionManager):
     def patch(self, url, data=None, **kwargs):
         """
         Sends a PATCH request.
-
+    
         :param str url: Url of the remote resource.
-        :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
-        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
-
-        :return: A requests like :class:`Response <urlquick.Response>` object
+        :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+        :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
+    
+        :return: A requests like Response object.
         :rtype: urlquick.Response
         """
         return self.request(u"PATCH", url, data=data, **kwargs)
@@ -890,13 +890,11 @@ class Session(ConnectionManager):
     def delete(self, url, **kwargs):
         """
         Sends a DELETE request.
-
-        Removes all current representations of the target resource given by a URI.
-
+    
         :param str url: Url of the remote resource.
-        :param kwargs: Optional arguments that :meth:`request <urlquick.Session.request>` takes.
-
-        :return: A requests like :class:`Response <urlquick.Response>` object
+        :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
+    
+        :return: A requests like Response object.
         :rtype: urlquick.Response
         """
         return self.request(u"DELETE", url, **kwargs)
@@ -904,25 +902,25 @@ class Session(ConnectionManager):
     def request(self, method, url, params=None, data=None, json=None, headers=None, cookies=None, auth=None,
                 timeout=10, allow_redirects=None, raise_for_status=None, max_age=None):
         """
-        Make request for online resource.
-
-        :param str method: HTTP request method, 'GET', 'HEAD', 'POST'.
+        Make request for remote resource.
+    
+        :param str method: HTTP request method, GET, HEAD, POST.
         :param str url: Url of the remote resource.
         :param dict params: (optional) Dictionary of url query key/value pairs.
-        :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
-        :param json: (optional) Json data to send in the body of the Request.
+        :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+        :param json: (optional) Json data sent in the body of the Request.
         :param dict headers: (optional) HTTP request headers.
         :param dict cookies: (optional) Dictionary of cookies to send with the request.
         :param tuple auth: (optional) (username, password) for basic authentication.
-        :param int timeout: (optional) Timeout in seconds.
-        :param bool allow_redirects: (optional) Boolean. Enable/disable redirection. Defaults to ``True``.
-        :param bool raise_for_status: (optional) Raise HTTPError if status code is > 400. Defaults to ``False``.
-        :param int max_age: (optional) Max age the cache can be before it's considered stale. -1 will disable caching.
+        :param int timeout: (optional) Connection timeout in seconds.
+        :param bool allow_redirects: (optional) Enable/disable redirection. Defaults to ``True``.
+        :param bool raise_for_status: (optional) Raise's HTTPError if status code is > 400. Defaults to ``False``.
+        :param int max_age: (optional) Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
                             Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
-
-        :return: A requests like :class:`Response <urlquick.Response>` object
+    
+        :return: A requests like Response object.
         :rtype: urlquick.Response
-
+        
         :raises MaxRedirects: If too many redirects was detected.
         :raises ConnError: If connection to server failed.
         :raises HTTPError: If response status is greater or equal to 400 and raise_for_status is ``True``.
@@ -1021,7 +1019,7 @@ class Response(object):
 
     # noinspection PyArgumentList
     def __init__(self, response, org_request, start_time, history):
-        #: The default encoding to use when no encoding is given.
+        #: The default encoding, used when no encoding is given.
         self.apparent_encoding = "utf8"
 
         #: File-like object representation of response (for advanced usage).
@@ -1037,14 +1035,14 @@ class Response(object):
         #: Any redirect responses will end up here.
         self.history = history
 
-        #: The amount of time elapsed between sending the request and
+        #: The amount of time elapsed, between sending the request and
         #: the arrival of the response (as a timedelta).
         self.elapsed = datetime.utcnow() - start_time
 
-        #: Integer Code of responded HTTP Status, e.g. 404 or 200.
+        #: Integer Code of responded HTTP Status e.g. 404 or 200.
         self.status_code = response.status
 
-        #: Textual reason of responded HTTP Status, e.g. "Not Found" or "OK".
+        #: Textual reason of response HTTP Status e.g. “Not Found” or “OK”.
         self.reason = unicode(response.reason)
 
         # Fetch content body
@@ -1060,7 +1058,7 @@ class Response(object):
 
     @CachedProperty
     def encoding(self):
-        """Encoding to decode with when accessing :meth:`resp.text <urlquick.Response.text>`."""
+        """Encoding, to decode with, when accessing :meth:`resp.text <urlquick.Response.text>`."""
         if u"Content-Type" in self._headers:
             header = self._headers[u"Content-Type"]
             for sec in header.split(u";"):
@@ -1075,7 +1073,7 @@ class Response(object):
     @CachedProperty
     def content(self):
         """
-        Content of the response, as bytes.
+        Content of the response in bytes.
         
         :raises ContentError: If content failes to decompress.
         """
@@ -1097,7 +1095,12 @@ class Response(object):
 
     @CachedProperty
     def text(self):
-        """Content of the response, as unicode."""
+        """
+        Content of the response in unicode.
+        
+        The response content will be decoded using the best available encoding based on the response headers.
+        Will fallback to :data:`apparent_encoding <urlquick.Response.apparent_encoding>` if no encoding was given within headers.
+        """
         if self.encoding:
             return self.content.decode(self.encoding)
         else:
@@ -1122,7 +1125,7 @@ class Response(object):
 
     @CachedProperty
     def links(self):
-        """Returns a dictionary of parsed header links of the response, if any."""
+        """Dictionary of 'parsed header links' of the response, if any."""
         if u"link" in self._headers:
             links = {}
 
@@ -1152,29 +1155,29 @@ class Response(object):
 
     @property
     def headers(self):
-        """Case-insensitive Dictionary of Response Headers"""
+        """Case-insensitive Dictionary of Response Headers."""
         return self._headers
 
     @property
     def is_redirect(self):
-        """True if this Response is a well-formed HTTP redirect that could have been processed automatically"""
+        """``True``, if this Response is a well-formed HTTP redirect, that could have been processed automatically."""
         headers = self._headers
         return u"location" in headers and self.status_code in REDIRECT_CODES
 
     @property
     def is_permanent_redirect(self):
-        """True if this Response is one of the permanent versions of redirect"""
+        """``True``, if this Response is one of the permanent versions of redirect."""
         headers = self._headers
         return u"location" in headers and self.status_code in (301, 308)
 
     @property
     def ok(self):
         """
-        Returns True if status_code is less than 400.
+        ``True``, if status_code is less than 400.
 
-        This attribute checks if the status code of the response is between 400 and 600 to see if there
-        was a client error or a server error. If the status code, is between 200 and 400, this will return True.
-        This is not a check to see if the response code is 200 OK.
+        This attribute checks if the status code of the response is between 400 and 600. To
+        see if there was a client error or a server error. If the status code is between
+        200 and 400, this will return True. This is not a check to see if the response code is 200 "OK".
         """
         return self.status_code < 400
 
@@ -1182,20 +1185,18 @@ class Response(object):
         """
         Returns the json-encoded content of a response.
 
-        :param kwargs: (Optional) arguments that :func:`json.loads` takes.
+        :param kwargs: (Optional) Arguments that :func:`json.loads` takes.
         :raises ValueError: If the response body does not contain valid json.
         """
         return _json.loads(self.text, **kwargs)
 
     def iter_content(self, chunk_size=512, decode_unicode=False):
         """
-        Iterates over the response data. The chunk size is the number of bytes it should read into memory.
-        This is not necessarily the length of each item returned as decoding can take place.
-
-        If decode_unicode is True, content will be decoded using the best available encoding based on the response.
+        Iterates over the response data. The chunk size are the number of bytes it should read into memory.
+        This is not necessarily the length of each item returned, as decoding can take place.
 
         :param int chunk_size: (Optional) The chunk size to use for each chunk. (default=512)
-        :param bool decode_unicode: (Optional) True to return unicode, else False to return bytes. (default=False)
+        :param bool decode_unicode: (Optional) ``True`` to return unicode, else ``False`` to return bytes. (default=``False``)
         """
         content = self.text if decode_unicode else self.content
         prevnl = 0
@@ -1213,8 +1214,8 @@ class Response(object):
         Iterates over the response data, one line at a time.
 
         :param int chunk_size: (Optional) Unused, here for compatibility with requests.
-        :param bool decode_unicode: (Optional) True to return unicode, else False to return bytes. (default=False)
-        :param bytes delimiter: (Optional) Delimiter use as the marker for the end of line. (default=b'\\\\n')
+        :param bool decode_unicode: (Optional) ``True`` to return unicode, else ``False`` to return bytes. (default=``False``)
+        :param bytes delimiter: (Optional) Delimiter used as the end of line marker. (default=b'\\\\n')
         """
         if decode_unicode:
             content = self.text
@@ -1267,23 +1268,23 @@ class Response(object):
 def request(method, url, params=None, data=None, json=None, headers=None, cookies=None, auth=None,
             timeout=10, allow_redirects=None, raise_for_status=None, max_age=None):
     """
-    Make request for online resource.
+    Make request for remote resource.
 
-    :param str method: HTTP request method, 'GET', 'HEAD', 'POST'.
+    :param str method: HTTP request method, GET, HEAD, POST.
     :param str url: Url of the remote resource.
     :param dict params: (optional) Dictionary of url query key/value pairs.
-    :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
-    :param json: (optional) Json data to send in the body of the Request.
+    :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+    :param json: (optional) Json data sent in the body of the Request.
     :param dict headers: (optional) HTTP request headers.
     :param dict cookies: (optional) Dictionary of cookies to send with the request.
     :param tuple auth: (optional) (username, password) for basic authentication.
-    :param int timeout: (optional) Timeout in seconds.
-    :param bool allow_redirects: (optional) Boolean. Enable/disable redirection. Defaults to ``True``.
-    :param bool raise_for_status: (optional) Raise HTTPError if status code is > 400. Defaults to ``False``.
-    :param int max_age: (optional) Max age the cache can be before it's considered stale. -1 will disable caching.
+    :param int timeout: (optional) Connection timeout in seconds.
+    :param bool allow_redirects: (optional) Enable/disable redirection. Defaults to ``True``.
+    :param bool raise_for_status: (optional) Raise's HTTPError if status code is > 400. Defaults to ``False``.
+    :param int max_age: (optional) Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
                         Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
 
-    :return: A requests like :class:`Response <urlquick.Response>` object
+    :return: A requests like Response object.
     :rtype: urlquick.Response
     
     :raises MaxRedirects: If too many redirects was detected.
@@ -1304,10 +1305,10 @@ def get(url, params=None, **kwargs):
     Requests data from a specified resource.
 
     :param str url: Url of the remote resource.
-    :param dict params: (optional) Dict of url query key/value pairs.
+    :param dict params: (optional) Dictionary of url query key/value pairs.
     :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <urlquick.Response>` object
+    :return: A requests like Response object.
     :rtype: urlquick.Response
     """
     with Session() as session:
@@ -1323,7 +1324,7 @@ def head(url, **kwargs):
     :param str url: Url of the remote resource.
     :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <urlquick.Response>` object
+    :return: A requests like Response object.
     :rtype: urlquick.Response
     """
     with Session() as session:
@@ -1337,11 +1338,11 @@ def post(url, data=None, json=None, **kwargs):
     Submits data to be processed to a specified resource.
 
     :param str url: Url of the remote resource.
-    :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
-    :param json: (optional) json data to send in the body of the Request.
+    :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+    :param json: (optional) Json data sent in the body of the Request.
     :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <urlquick.Response>` object
+    :return: A requests like Response object.
     :rtype: urlquick.Response
     """
     with Session() as session:
@@ -1355,10 +1356,10 @@ def put(url, data=None, **kwargs):
     Uploads a representation of the specified URI.
 
     :param str url: Url of the remote resource.
-    :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
+    :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
     :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <urlquick.Response>` object
+    :return: A requests like Response object.
     :rtype: urlquick.Response
     """
     with Session() as session:
@@ -1370,10 +1371,10 @@ def patch(url, data=None, **kwargs):
     Sends a PATCH request.
 
     :param str url: Url of the remote resource.
-    :param data: (optional) Dictionary (will be form-encoded) or bytes to send in the body of the Request.
+    :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
     :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <urlquick.Response>` object
+    :return: A requests like Response object.
     :rtype: urlquick.Response
     """
     with Session() as session:
@@ -1387,7 +1388,7 @@ def delete(url, **kwargs):
     :param str url: Url of the remote resource.
     :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
-    :return: A requests like :class:`Response <urlquick.Response>` object
+    :return: A requests like Response object.
     :rtype: urlquick.Response
     """
     with Session() as session:
