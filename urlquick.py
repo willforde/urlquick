@@ -108,7 +108,7 @@ __all__ = ["request", "get", "head", "post", "put", "patch", "delete", "cache_cl
 __repo__ = "https://github.com/willforde/urlquick"
 __copyright__ = "Copyright (C) 2017 William Forde"
 __author__ = "William Forde"
-__license__ = "GPLv3"
+__license__ = "MIT"
 __version__ = "0.1.3"
 
 # Cacheable request types
