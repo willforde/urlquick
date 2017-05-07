@@ -485,7 +485,7 @@ class ConnectionManager(CacheAdapter):
 
     def connect(self, req, timeout):
         # Fetch connection from pool and attempt to reuse if available
-        Connection, pool = self.request_handler[req.type]
+        connection, pool = self.request_handler[req.type]
         if req.host in pool:
             try:
                 return self.send_request(pool[req.host], req)
@@ -499,7 +499,7 @@ class ConnectionManager(CacheAdapter):
                     raise
 
         # Create a new connection
-        conn = Connection(req.host, timeout=timeout)
+        conn = connection(req.host, timeout=timeout)
         response = self.send_request(conn, req)
 
         # Add connection to the pool if the response is not set to close
@@ -614,7 +614,7 @@ class Request(object):
 
         # Parse the url into each element
         scheme, netloc, path, query, _ = urlsplit(url, scheme=scheme)
-        if not scheme in ("http", "https"):
+        if scheme not in ("http", "https"):
             raise ValueError("Unsupported scheme: {}".format(scheme))
 
         # Insure that all element of the url can be encoded into ascii
@@ -676,7 +676,7 @@ class Request(object):
             return self._urlparts.path
 
     def header_items(self):
-        """Return a list of tuples (header_name, header_value) of the Request headers, as native type of :class:`str`."""
+        """Return list of tuples (header_name, header_value) of the Request headers, as native type of :class:`str`."""
         if py3:
             return self.headers.items()
         else:
@@ -936,20 +936,20 @@ class Session(ConnectionManager):
         raise_for_status = self.raise_for_status if raise_for_status is None else raise_for_status
 
         # Ensure that all mappings of unicode data
-        reqHeaders = CaseInsensitiveDict(self._headers, headers)
-        reqCookies = UnicodeDict(self._cookies, cookies)
-        reqParams = UnicodeDict(self._params, params)
+        req_headers = CaseInsensitiveDict(self._headers, headers)
+        req_cookies = UnicodeDict(self._cookies, cookies)
+        req_params = UnicodeDict(self._params, params)
 
         # Add cookies to headers
-        if reqCookies and not u"Cookie" in reqHeaders:
-            header = u"; ".join([u"{}={}".format(key, value) for key, value in reqCookies.items()])
-            reqHeaders[u"Cookie"] = header
+        if req_cookies and u"Cookie" not in req_headers:
+            header = u"; ".join([u"{}={}".format(key, value) for key, value in req_cookies.items()])
+            req_headers[u"Cookie"] = header
 
         # Fetch max age of cache
         max_age = (-1 if self.max_age is None else self.max_age) if max_age is None else max_age
 
         # Parse url into it's individual components including params if given
-        req = Request(method, url, reqHeaders, data, json, reqParams, reqCookies)
+        req = Request(method, url, req_headers, data, json, req_params, req_cookies)
 
         # Add Authorization header if needed
         auth = auth or req.auth or self._auth
@@ -979,9 +979,9 @@ class Session(ConnectionManager):
                 # Create new request for redirect
                 location = resp.headers.get(u"location")
                 if resp.status_code == 307:
-                    req = Request(req.method, location, reqHeaders, req.data, referer=req.url)
+                    req = Request(req.method, location, req_headers, req.data, referer=req.url)
                 else:
-                    req = Request(u"GET", location, reqHeaders, referer=req.url)
+                    req = Request(u"GET", location, req_headers, referer=req.url)
                 logging.debug("Redirecting to = %s", unquote(req.url))
 
             # And Authorization Credentials if needed
@@ -1102,7 +1102,8 @@ class Response(object):
         Content of the response in unicode.
         
         The response content will be decoded using the best available encoding based on the response headers.
-        Will fallback to :data:`apparent_encoding <urlquick.Response.apparent_encoding>` if no encoding was given within headers.
+        Will fallback to :data:`apparent_encoding <urlquick.Response.apparent_encoding>`
+        if no encoding was given within headers.
         """
         if self.encoding:
             return self.content.decode(self.encoding)
@@ -1198,8 +1199,10 @@ class Response(object):
         Iterates over the response data. The chunk size are the number of bytes it should read into memory.
         This is not necessarily the length of each item returned, as decoding can take place.
 
-        :param int chunk_size: (Optional) The chunk size to use for each chunk. (default=512)
-        :param bool decode_unicode: (Optional) ``True`` to return unicode, else ``False`` to return bytes. (default=``False``)
+        :param int chunk_size: (Optional) The chunk size to use for each chunk.
+                               (default=512)
+        :param bool decode_unicode: (Optional) ``True`` to return unicode, else ``False`` to return bytes.
+                                    (default=``False``)
         """
         content = self.text if decode_unicode else self.content
         prevnl = 0
@@ -1217,8 +1220,10 @@ class Response(object):
         Iterates over the response data, one line at a time.
 
         :param int chunk_size: (Optional) Unused, here for compatibility with requests.
-        :param bool decode_unicode: (Optional) ``True`` to return unicode, else ``False`` to return bytes. (default=``False``)
-        :param bytes delimiter: (Optional) Delimiter used as the end of line marker. (default=b'\\\\n')
+        :param bool decode_unicode: (Optional) ``True`` to return unicode, else ``False`` to return bytes.
+                                    (default=``False``)
+        :param bytes delimiter: (Optional) Delimiter used as the end of line marker.
+                                (default=b'\\\\n')
         """
         if decode_unicode:
             content = self.text
