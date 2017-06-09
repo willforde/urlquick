@@ -702,6 +702,10 @@ class UnicodeDict(dict):
                         value = make_unicode(value)
                         self[key] = value
 
+                    # Remove item from dict if already added and value is None
+                    elif key in self:
+                        del self[key]
+
 
 def make_unicode(data, encoding="utf8", errors=""):
     """Ensure that data is a unicode string"""
