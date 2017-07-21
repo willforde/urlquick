@@ -1226,6 +1226,16 @@ class Response(object):
         """
         return _json.loads(self.text, **kwargs)
 
+    def xml(self):
+        """
+        Parse's "XML" document into a element tree.
+
+        :return: The root element of the element tree.
+        :rtype: xml.etree.ElementTree.Element
+        """
+        from xml.etree import ElementTree
+        return ElementTree.fromstring(self.content)
+
     def iter_content(self, chunk_size=512, decode_unicode=False):
         """
         Iterates over the response data. The chunk size are the number of bytes it should read into memory.
