@@ -43,7 +43,7 @@ requests: http://docs.python-requests.org/en/master/
 # Standard library imports
 from collections import MutableMapping, defaultdict
 from base64 import b64encode, b64decode
-from codecs import open as _open
+from codecs import open as _open, getencoder
 from datetime import datetime
 import json as _json
 import logging
