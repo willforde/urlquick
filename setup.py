@@ -24,7 +24,8 @@ def version(name):
 
 setup(name='urlquick',
       version=version('urlquick.py'),
-      description='A light-weight http client with requests like interface. Featuring persistent connections and caching support.',
+      description='A light-weight http client with requests like interface.'
+                  'Featuring persistent connectionsand caching support.',
       long_description=readme(),
       keywords='url lightweight caching http-client requests',
       classifiers=['Development Status :: 4 - Beta',
