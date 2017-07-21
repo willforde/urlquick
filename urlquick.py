@@ -1124,12 +1124,22 @@ class Response(object):
         if no encoding was given within headers.
         """
         if self.encoding:
-            return self.content.decode(self.encoding)
-        else:
+            try:
+                return self.content.decode(self.encoding)
+            except UnicodeDecodeError:
+                logger.debug("Failed to decode content with given encoding: '%s'", self.encoding)
+
+        if not (self.encoding and getencoder(self.encoding) == getencoder(self.apparent_encoding)):
             try:
                 return self.content.decode(self.apparent_encoding)
             except UnicodeDecodeError:
-                return self.content.decode("iso-8859-1")
+                logger.debug("Failed to decode content with default encoding: '%s'", self.apparent_encoding)
+
+        try:
+            return self.content.decode("iso-8859-1")
+        except UnicodeDecodeError:
+            logger.debug("Failed to decode content with fallback encoding: 'iso-8859-1'")
+            raise
 
     @CachedProperty
     def cookies(self):
