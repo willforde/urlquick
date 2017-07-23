@@ -967,7 +967,7 @@ class Session(ConnectionManager):
             logger.debug("Request data: %s", data)
 
         # Parse url into it's individual components including params if given
-        req = Request(method, url, req_headers, data, json, req_params, req_cookies)
+        req = Request(method, url, req_headers, data, json, req_params)
 
         # Add Authorization header if needed
         auth = auth or req.auth or self._auth
