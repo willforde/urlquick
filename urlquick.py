@@ -962,7 +962,7 @@ class Session(ConnectionManager):
         if req_cookies:
             logger.debug("Request cookies: %s", req_cookies)
         if json:
-            logger.debug("Request json: %s", req_cookies)
+            logger.debug("Request json: %s", json)
         if data:
             logger.debug("Request data: %s", data)
 
