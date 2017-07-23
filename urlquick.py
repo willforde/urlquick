@@ -616,7 +616,7 @@ class Request(object):
                 url = url[1:]
 
         # Parse the url into each element
-        scheme, netloc, path, query, _ = urlsplit(url, scheme=scheme)
+        scheme, netloc, path, query, _ = urlsplit(url.replace(u" ", u"%20"), scheme=scheme)
         if scheme not in ("http", "https"):
             raise ValueError("Unsupported scheme: {}".format(scheme))
 
