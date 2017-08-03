@@ -248,7 +248,8 @@ class CacheHandler(object):
 
     @staticmethod
     def cache_dir():
-        cache_dir = os.path.join(CACHE_LOCATION, ".cache")
+        cache_loc = unicode(CACHE_LOCATION, "utf8") if isinstance(CACHE_LOCATION, bytes) else CACHE_LOCATION
+        cache_dir = os.path.join(cache_loc, u".cache")
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
         return cache_dir
@@ -377,6 +378,22 @@ class CacheHandler(object):
 
         # Append urlhash to the filename
         return "cache-{}".format(urlhash)
+
+    @staticmethod
+    def safe_path(path):
+        """
+        Convert path into a encoding that best suits the platform os.
+        Unicode when on windows and utf8 when on linux/bsd.
+
+        :type path: str or unicode
+        :param path: The path to convert.
+        :return: Returns the path as unicode or utf8 encoded str.
+        """
+        ensure_uni = sys.platform.startswith("win")
+        if isinstance(path, bytes):
+            return unicode(path, "utf8") if ensure_uni else path
+        else:
+            return path if ensure_uni else path.encode("utf8")
 
 
 def cache_cleanup(max_age=None):
