@@ -5,9 +5,9 @@ import unittest
 import urlquick
 import types
 import socket
-import hashlib
 import base64
 import json
+import sys
 import os
 import io
 import time
@@ -23,6 +23,7 @@ if urlquick.py3:
     from gzip import compress as gzip_compress
 else:
     from gzip import GzipFile
+
     def gzip_compress(data, compresslevel=4):
         """Compress data in one shot and return the compressed string.
         Optional argument is the compression level, in range of 0-9.
@@ -32,15 +33,11 @@ else:
             f.write(data)
         return buf.getvalue()
 
-def disable_logger(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        logging.disable(logging.CRITICAL)
-        try:
-            return func(*args, **kwargs)
-        finally:
-            logging.disable(logging.NOTSET)
-    return wrapper
+logger = urlquick.logger
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+logger.addHandler(ch)
 
 
 class TestMisc(unittest.TestCase):
@@ -202,7 +199,7 @@ class TestCacheHandler(unittest.TestCase):
     class create(object):
         def __init__(self, url, max_age=14400, body=u"", headers=None, status=200, reason=u"OK"):
             response = {u"body": body, u"headers": headers, u"status": status, u"reason": reason,
-                         u"version": 11, u"strict": True}
+                        u"version": 11, u"strict": True}
             response[u"body"] = response[u"body"].encode("utf8")
 
             # Base64 encode the body to make it json serializable
@@ -213,21 +210,22 @@ class TestCacheHandler(unittest.TestCase):
             if isinstance(url, unicode):
                 url = url.encode("utf8")
 
-            hash_url = "cache-{}".format(hashlib.sha1(url).hexdigest())
+            hash_url = urlquick.CacheHandler.hash_url(url)
             path = urlquick.CacheHandler.cache_dir()
-            cache_path = os.path.join(path, hash_url)
+            cache_file = os.path.join(path, hash_url)
 
             # Save the response to disk using json Serialization
-            with open(cache_path, "w") as stream:
+            with open(cache_file, "w") as stream:
                 json.dump(response, stream, indent=4, separators=(",", ":"))
 
+            print(cache_file)
             self.cache = urlquick.CacheHandler(hash_url, max_age)
 
         def __enter__(self):
             return self.cache
 
         def __exit__(self, exc_type, exc_val, exc_tb):
-            self.cache.delete(self.cache.cache_path)
+            self.cache.delete(self.cache.cache_file)
 
     def test_cache_dir(self):
         def exists(*args):
@@ -273,13 +271,12 @@ class TestCacheHandler(unittest.TestCase):
         with self.create("https://httpbin.org/get", 0) as cache:
             self.assertFalse(cache.isfresh())
 
-    @disable_logger
     def test_reset_timestamp(self):
         with self.create("https://httpbin.org/get") as cache:
-            before_reset = os.stat(cache.cache_path).st_mtime
+            before_reset = os.stat(cache.cache_file).st_mtime
             time.sleep(.1)
             cache.reset_timestamp()
-            after_reset = os.stat(cache.cache_path).st_mtime
+            after_reset = os.stat(cache.cache_file).st_mtime
             self.assertNotEqual(before_reset, after_reset)
 
     def test_conditional_headers_etag(self):
@@ -308,21 +305,24 @@ class TestCacheHandler(unittest.TestCase):
             self.assertTrue("If-modified-since" in req_headers)
             self.assertEqual(req_headers["If-modified-since"], "Wed, 21 Oct 2015 07:28:00 GMT")
 
+    def assert_url_hash_Equal(self, url_hash, check):
+        self.assertEqual(url_hash, urlquick.CacheHandler.safe_path(check))
+
     def test_hash_url_unicode(self):
         hashurl = urlquick.CacheHandler.hash_url(u"https://httpbin.org/get")
-        self.assertEqual(hashurl, "cache-eadd3f1d0242ca5f05c4c7b89188df7eadc72976")
+        self.assert_url_hash_Equal(hashurl, "cache-eadd3f1d0242ca5f05c4c7b89188df7eadc72976")
 
     def test_hash_url_bytes(self):
         hashurl = urlquick.CacheHandler.hash_url(b"https://httpbin.org/get")
-        self.assertEqual(hashurl, "cache-eadd3f1d0242ca5f05c4c7b89188df7eadc72976")
+        self.assert_url_hash_Equal(hashurl, "cache-eadd3f1d0242ca5f05c4c7b89188df7eadc72976")
 
     def test_hash_url_data_unicode(self):
         hashurl = urlquick.CacheHandler.hash_url("https://httpbin.org/get", data=u"data")
-        self.assertEqual(hashurl, "cache-da991148ea2a035a6f4204b33265ac70b42b0c4b")
+        self.assert_url_hash_Equal(hashurl, "cache-da991148ea2a035a6f4204b33265ac70b42b0c4b")
 
     def test_hash_url_data_bytes(self):
         hashurl = urlquick.CacheHandler.hash_url("https://httpbin.org/get", data=b"data")
-        self.assertEqual(hashurl, "cache-da991148ea2a035a6f4204b33265ac70b42b0c4b")
+        self.assert_url_hash_Equal(hashurl, "cache-da991148ea2a035a6f4204b33265ac70b42b0c4b")
 
     def test_failed_delete(self):
         def remove(*args, **kwargs):
@@ -334,11 +334,10 @@ class TestCacheHandler(unittest.TestCase):
 
         try:
             with self.create("https://httpbin.org/get") as cache:
-                cache.delete(cache.cache_path)
+                cache.delete(cache.cache_file)
         finally:
             os.remove = _remove
 
-    @disable_logger
     def test_load_TypeError(self):
         def load(*args, **kwargs):
             raise TypeError
@@ -351,7 +350,6 @@ class TestCacheHandler(unittest.TestCase):
         finally:
             json.load = _load
 
-    @disable_logger
     def test_load_OSError(self):
         def load(*args, **kwargs):
             raise OSError
@@ -364,7 +362,6 @@ class TestCacheHandler(unittest.TestCase):
         finally:
             json.load = _load
 
-    @disable_logger
     def test_save_TypeError(self):
         def dump(*args, **kwargs):
             raise TypeError
@@ -377,11 +374,10 @@ class TestCacheHandler(unittest.TestCase):
 
         try:
             cache.update({}, b"data", 200, "OK")
-            self.assertFalse(os.path.exists(cache.cache_path))
+            self.assertFalse(os.path.exists(cache.cache_file))
         finally:
             json.dump = _dump
 
-    @disable_logger
     def test_save_OSError(self):
         def dump(*args, **kwargs):
             raise OSError
@@ -394,7 +390,7 @@ class TestCacheHandler(unittest.TestCase):
 
         try:
             cache.update({}, b"data", 200, "OK")
-            self.assertFalse(os.path.exists(cache.cache_path))
+            self.assertFalse(os.path.exists(cache.cache_file))
         finally:
             json.dump = _dump
 
@@ -416,14 +412,14 @@ class TestCacheHandler(unittest.TestCase):
     def test_cleanup_no_max_age(self):
         with self.create("https://httpbin.org/get") as cache:
             # Check that no error is raised
-            urlquick.cache_cleanup(0)
-            self.assertFalse(os.path.exists(cache.cache_path))
+            urlquick.CacheHandler.cache_cleanup(0)
+            self.assertFalse(os.path.exists(cache.cache_file))
 
     def test_cleanup_max_age(self):
         with self.create("https://httpbin.org/get") as cache:
             # Check that no error is raised
-            urlquick.cache_cleanup(99999999)
-            self.assertTrue(os.path.exists(cache.cache_path))
+            urlquick.CacheHandler.cache_cleanup(99999999)
+            self.assertTrue(os.path.exists(cache.cache_file))
 
     def test_cache_check_fresh(self):
         with self.create("https://httpbin.org/get"):
@@ -448,14 +444,14 @@ class TestCacheHandler(unittest.TestCase):
             cache = urlquick.CacheAdapter()
             ret = cache.cache_check("PUT", "https://httpbin.org/get", None, {})
             self.assertIsNone(ret)
-            self.assertFalse(os.path.exists(_cache.cache_path))
+            self.assertFalse(os.path.exists(_cache.cache_file))
 
     def test_cache_check_delete(self):
         with self.create("https://httpbin.org/get") as _cache:
             cache = urlquick.CacheAdapter()
             ret = cache.cache_check("DELETE", "https://httpbin.org/get", None, {})
             self.assertIsNone(ret)
-            self.assertFalse(os.path.exists(_cache.cache_path))
+            self.assertFalse(os.path.exists(_cache.cache_file))
 
     def test_cache_check_options(self):
         with self.create("https://httpbin.org/get"):
@@ -485,6 +481,20 @@ class TestCacheHandler(unittest.TestCase):
             cache.cache_check("GET", "https://httpbin.org/get", None, {})
             ret = cache.handle_response("GET", 404, callback)
             self.assertIsNone(ret)
+
+    def test_save_path_bytes(self):
+        ret = urlquick.CacheHandler.safe_path(b"testpath")
+        if sys.platform.startswith("win"):
+            self.assertIsInstance(ret, unicode)
+        else:
+            self.assertIsInstance(ret, bytes)
+
+    def test_save_path_uni(self):
+        ret = urlquick.CacheHandler.safe_path(u"testpath")
+        if sys.platform.startswith("win"):
+            self.assertIsInstance(ret, unicode)
+        else:
+            self.assertIsInstance(ret, bytes)
 
 
 class TestRequest(unittest.TestCase):
@@ -773,7 +783,7 @@ def create_resp(body=b"", headers=None, status=200, reason="OK"):
     def decorator(function):
         @wraps(function)
         def wrapper(self):
-            urlquick.cache_cleanup(0)
+            urlquick.CacheHandler.cache_cleanup(0)
             response_data = urlquick.CacheResponse(headers, body, status, reason)
             resp = urlquick.Response(response_data, self.Request(), self.start_time, [])
             function(self, resp)
@@ -1095,7 +1105,7 @@ def mock_response(body=b"", headers=None, status=200, reason="OK"):
     def decorator(function):
         @wraps(function)
         def wrapper(self):
-            urlquick.cache_cleanup(0)
+            urlquick.CacheHandler.cache_cleanup(0)
 
             # Store original functions
             org_HTTPConnection = urlquick.HTTPConnection

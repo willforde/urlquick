@@ -41,9 +41,10 @@ requests: http://docs.python-requests.org/en/master/
 """
 
 # Standard library imports
+from __future__ import unicode_literals
 from collections import MutableMapping, defaultdict
-from base64 import b64encode, b64decode
 from codecs import open as _open, getencoder
+from base64 import b64encode, b64decode
 from datetime import datetime
 import json as _json
 import logging
@@ -67,6 +68,8 @@ if py3:
     from http.cookies import SimpleCookie
     # noinspection PyShadowingBuiltins
     unicode = str
+
+    CACHE_LOCATION = os.getcwd()
 else:
     # noinspection PyUnresolvedReferences
     from httplib import HTTPConnection, HTTPSConnection, HTTPException
@@ -76,6 +79,8 @@ else:
     from urllib import urlencode as _urlencode, quote as _quote, unquote as _unquote
     # noinspection PyUnresolvedReferences
     from Cookie import SimpleCookie
+
+    CACHE_LOCATION = os.getcwdu()
 
     def quote(data, safe=b"/", encoding="utf8", errors="strict"):
         data = data.encode(encoding, errors)
@@ -112,10 +117,9 @@ __repo__ = "https://github.com/willforde/urlquick"
 __copyright__ = "Copyright (C) 2017 William Forde"
 __author__ = "William Forde"
 __license__ = "MIT"
-__version__ = "0.1.3"
+__version__ = "0.9.0"
 
 # Cacheable request types
-CACHE_LOCATION = os.getcwd()
 CACHEABLE_METHODS = (u"GET", u"HEAD", u"POST")
 CACHEABLE_CODES = (200, 203, 204, 300, 301, 302, 303, 307, 308, 410, 414)
 REDIRECT_CODES = (301, 302, 303, 307, 308)
@@ -236,31 +240,34 @@ class CachedProperty(object):
 
 
 class CacheHandler(object):
-    def __init__(self, url_hash, max_age=14400):
+    def __init__(self, uid, max_age=MAX_AGE):
         self.max_age = max_age
         self.response = None
+
+        # Filepath to cache file
         cache_dir = self.cache_dir()
-        self.cache_path = cache_path = os.path.join(cache_dir, url_hash)
-        if os.path.exists(cache_path):
+        self.cache_file = cache_file = os.path.join(cache_dir, uid)
+        print(cache_file)
+        if os.path.exists(cache_file):
             self.response = self._load()
             if self.response is None:
-                self.delete(cache_path)
+                self.delete(cache_file)
 
-    @staticmethod
-    def cache_dir():
-        cache_loc = unicode(CACHE_LOCATION, "utf8") if isinstance(CACHE_LOCATION, bytes) else CACHE_LOCATION
-        cache_dir = os.path.join(cache_loc, u".cache")
+    @classmethod
+    def cache_dir(cls):
+        """Returns the cache directory."""
+        cache_dir = cls.safe_path(os.path.join(CACHE_LOCATION, u".cache"))
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
         return cache_dir
 
     @staticmethod
     def delete(cache_path):
-        """Delete cache from disk"""
+        """Delete cache from disk."""
         try:
             os.remove(cache_path)
-        except OSError:
-            pass
+        except EnvironmentError:
+            logger.error("Faild to remove cache: %s", cache_path)
         else:
             logger.debug("Removed cache: %s", cache_path)
 
@@ -269,21 +276,21 @@ class CacheHandler(object):
         return (time.time() - os.stat(cache_path).st_mtime) < max_age
 
     def isfresh(self):
-        """ Return True if cache is fresh else False """
+        """Return True if cache is fresh else False."""
         # Check that the response is of status 301 or that the cache is not older than the max age
         if self.response.status in (301, 308, 414) or self.max_age == -1:
             return True
         elif self.max_age == 0:
             return False
         else:
-            return self.isfilefresh(self.cache_path, self.max_age)
+            return self.isfilefresh(self.cache_file, self.max_age)
 
     def reset_timestamp(self):
-        """ Reset the last modified timestamp to current time"""
-        os.utime(self.cache_path, None)
+        """Reset the last modified timestamp to current time."""
+        os.utime(self.cache_file, None)
 
     def add_conditional_headers(self, headers):
-        """Return a dict of conditional headers from cache"""
+        """Return a dict of conditional headers from cache."""
         # Fetch cached headers
         cached_headers = self.response.headers
 
@@ -315,10 +322,10 @@ class CacheHandler(object):
         self._save(headers=dict(headers), body=body, status=status, reason=reason, version=version, strict=strict)
 
     def _load(self):
-        """ Load the cache response that is stored on disk """
+        """Load the cache response that is stored on disk."""
         try:
             # Atempt to read the raw cache data
-            with _open(self.cache_path, "rb", encoding="utf8") as stream:
+            with _open(self.cache_file, "rb", encoding="utf8") as stream:
                 json_data = _json.load(stream)
 
         except (IOError, OSError):
@@ -340,26 +347,35 @@ class CacheHandler(object):
 
         try:
             # Save the response to disk using json Serialization
-            with _open(self.cache_path, "wb", encoding="utf8") as stream:
+            with _open(self.cache_file, "wb", encoding="utf8") as stream:
                 _json.dump(response, stream, indent=4, separators=(",", ":"))
 
         except (IOError, OSError):
             logger.exception("Cache Error: Failed to write response to cache.")
-            self.delete(self.cache_path)
+            self.delete(self.cache_file)
 
         except TypeError:
             logger.exception("Cache Error: Failed to serialize response.")
-            self.delete(self.cache_path)
-
-    def __bool__(self):
-        return self.response is not None
-
-    def __nonzero__(self):
-        return self.response is not None
+            self.delete(self.cache_file)
 
     @staticmethod
-    def hash_url(url, data=None):
-        """ Return url as a sha1 encoded hash """
+    def safe_path(path):
+        """
+        Convert path into a encoding that best suits the platform os.
+        Unicode when on windows and utf8 when on linux/bsd.
+
+        :type path: str or bytes
+        :param path: The path to convert.
+        :return: Returns the path as unicode or utf8 encoded str.
+        """
+        if sys.platform.startswith("win"):
+            return path.decode("utf8") if isinstance(path, bytes) else path
+        else:
+            return path.encode("utf8") if isinstance(path, unicode) else path
+
+    @classmethod
+    def hash_url(cls, url, data=None):
+        """Return url as a sha1 encoded hash."""
         # Make sure that url is of type bites
         if isinstance(url, unicode):
             url = url.encode("utf8")
@@ -373,45 +389,45 @@ class CacheHandler(object):
         # Convert hashed url to unicode
         urlhash = hashlib.sha1(url).hexdigest()
         if isinstance(urlhash, bytes):
-            # noinspection PyArgumentList
             urlhash = unicode(urlhash)
 
         # Append urlhash to the filename
-        return "cache-{}".format(urlhash)
+        return cls.safe_path(u"cache-{}".format(urlhash))
 
-    @staticmethod
-    def safe_path(path):
+    @classmethod
+    def from_url(cls, url, data=None, max_age=MAX_AGE):
+        """Initialize CacheHandler with url instead of uid."""
+        uid = cls.hash_url(url, data)
+        return cls(uid, max_age)
+
+    def __bool__(self):
+        return self.response is not None
+
+    def __nonzero__(self):
+        return self.response is not None
+
+    @classmethod
+    def cache_cleanup(cls, max_age=None):
         """
-        Convert path into a encoding that best suits the platform os.
-        Unicode when on windows and utf8 when on linux/bsd.
+        Remove all stale cache files.
 
-        :type path: str or unicode
-        :param path: The path to convert.
-        :return: Returns the path as unicode or utf8 encoded str.
+        :param int max_age: [opt] The max age the cache can be before removal.
+                            defaults => :data:`MAX_AGE <urlquick.MAX_AGE>`
         """
-        ensure_uni = sys.platform.startswith("win")
-        if isinstance(path, bytes):
-            return unicode(path, "utf8") if ensure_uni else path
-        else:
-            return path if ensure_uni else path.encode("utf8")
+        max_age = MAX_AGE if max_age is None else max_age
+        cache_dir = cls.cache_dir()
+        if not os.path.exists(cache_dir):
+            return None
 
-
-def cache_cleanup(max_age=None):
-    """
-    Remove all stale cache files.
-
-    :param int max_age: (optional) The max age the cache can be before removal.
-                        Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
-    """
-    max_age = MAX_AGE if max_age is None else max_age
-    cache_dir = CacheHandler.cache_dir()
-    for url_hash in os.listdir(cache_dir):
-        # Check that we actually have a cache file
-        if url_hash.startswith("cache-"):
-            cache_path = os.path.join(cache_dir, url_hash)
-            # Check if the cache is not fresh and delete if so
-            if not CacheHandler.isfilefresh(cache_path, max_age):
-                CacheHandler.delete(cache_path)
+        # Loop over all cache files and remove stale files
+        filestart = cls.safe_path("cache-")
+        for cachefile in os.listdir(cache_dir):
+            # Check that we actually have a cache file
+            if cachefile.startswith(filestart):
+                cache_path = os.path.join(cache_dir, cachefile)
+                # Check if the cache is not fresh and delete if so
+                if not cls.isfilefresh(cache_path, max_age):
+                    cls.delete(cache_path)
 
 
 class CacheAdapter(object):
@@ -421,16 +437,15 @@ class CacheAdapter(object):
     def cache_check(self, method, url, data, headers, max_age=None):
         # Fetch max age from request header
         max_age = max_age if max_age is not None else int(headers.pop(u"x-max-age", MAX_AGE))
-        url_hash = CacheHandler.hash_url(url, data)
         if method == u"OPTIONS":
             return None
 
         # Check if cache exists first
-        self.__cache = cache = CacheHandler(url_hash, max_age)
+        self.__cache = cache = CacheHandler.from_url(url, data, max_age)
         if cache:
             if method in ("PUT", "DELETE"):
                 logger.debug("Cache purged, %s request invalidates cache", method)
-                cache.delete(cache.cache_path)
+                cache.delete(cache.cache_file)
 
             elif cache.isfresh():
                 logger.debug("Cache is fresh, returning cached response")
