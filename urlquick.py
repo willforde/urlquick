@@ -364,14 +364,15 @@ class CacheHandler(object):
         Convert path into a encoding that best suits the platform os.
         Unicode when on windows and utf8 when on linux/bsd.
 
-        :type path: str or bytes
+        :type path: str
         :param path: The path to convert.
         :return: Returns the path as unicode or utf8 encoded str.
         """
-        if sys.platform.startswith("win"):
-            return path.decode("utf8") if isinstance(path, bytes) else path
-        else:
-            return path.encode("utf8") if isinstance(path, unicode) else path
+        # Notting needs to be down if on windows as windows works well with unicode already
+        # We only want to convert to bytes when we are on linux.
+        if not sys.platform.startswith("win"):
+            path = path.encode("utf8")
+        return path
 
     @classmethod
     def hash_url(cls, url, data=None):
@@ -418,7 +419,7 @@ class CacheHandler(object):
         cache_dir = cls.cache_dir()
 
         # Loop over all cache files and remove stale files
-        filestart = cls.safe_path("cache-")
+        filestart = cls.safe_path(u"cache-")
         for cachefile in os.listdir(cache_dir):
             # Check that we actually have a cache file
             if cachefile.startswith(filestart):

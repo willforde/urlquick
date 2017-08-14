@@ -483,13 +483,6 @@ class TestCacheHandler(unittest.TestCase):
             ret = cache.handle_response("GET", 404, callback)
             self.assertIsNone(ret)
 
-    def test_save_path_bytes(self):
-        ret = urlquick.CacheHandler.safe_path(b"testpath")
-        if sys.platform.startswith("win"):
-            self.assertIsInstance(ret, unicode)
-        else:
-            self.assertIsInstance(ret, bytes)
-
     def test_save_path_uni(self):
         ret = urlquick.CacheHandler.safe_path(u"testpath")
         if sys.platform.startswith("win"):
