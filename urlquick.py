@@ -407,26 +407,27 @@ class CacheHandler(object):
     def __nonzero__(self):
         return self.response is not None
 
-    @classmethod
-    def cache_cleanup(cls, max_age=None):
-        """
-        Remove all stale cache files.
 
-        :param int max_age: [opt] The max age the cache can be before removal.
-                            defaults => :data:`MAX_AGE <urlquick.MAX_AGE>`
-        """
-        max_age = MAX_AGE if max_age is None else max_age
-        cache_dir = cls.cache_dir()
+def cache_cleanup(max_age=None):
+    """
+    Remove all stale cache files.
 
-        # Loop over all cache files and remove stale files
-        filestart = cls.safe_path(u"cache-")
-        for cachefile in os.listdir(cache_dir):
-            # Check that we actually have a cache file
-            if cachefile.startswith(filestart):
-                cache_path = os.path.join(cache_dir, cachefile)
-                # Check if the cache is not fresh and delete if so
-                if not cls.isfilefresh(cache_path, max_age):
-                    cls.delete(cache_path)
+    :param int max_age: [opt] The max age the cache can be before removal.
+                        defaults => :data:`MAX_AGE <urlquick.MAX_AGE>`
+    """
+    handler = CacheHandler
+    max_age = MAX_AGE if max_age is None else max_age
+    cache_dir = handler.cache_dir()
+
+    # Loop over all cache files and remove stale files
+    filestart = handler.safe_path(u"cache-")
+    for cachefile in os.listdir(cache_dir):
+        # Check that we actually have a cache file
+        if cachefile.startswith(filestart):
+            cache_path = os.path.join(cache_dir, cachefile)
+            # Check if the cache is not fresh and delete if so
+            if not handler.isfilefresh(cache_path, max_age):
+                handler.delete(cache_path)
 
 
 class CacheAdapter(object):

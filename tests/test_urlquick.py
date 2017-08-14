@@ -413,13 +413,13 @@ class TestCacheHandler(unittest.TestCase):
     def test_cleanup_no_max_age(self):
         with self.create("https://httpbin.org/get") as cache:
             # Check that no error is raised
-            urlquick.CacheHandler.cache_cleanup(0)
+            urlquick.cache_cleanup(0)
             self.assertFalse(os.path.exists(cache.cache_file))
 
     def test_cleanup_max_age(self):
         with self.create("https://httpbin.org/get") as cache:
             # Check that no error is raised
-            urlquick.CacheHandler.cache_cleanup(99999999)
+            urlquick.cache_cleanup(99999999)
             self.assertTrue(os.path.exists(cache.cache_file))
 
     def test_cache_check_fresh(self):
@@ -777,7 +777,7 @@ def create_resp(body=b"", headers=None, status=200, reason="OK"):
     def decorator(function):
         @wraps(function)
         def wrapper(self):
-            urlquick.CacheHandler.cache_cleanup(0)
+            urlquick.cache_cleanup(0)
             response_data = urlquick.CacheResponse(headers, body, status, reason)
             resp = urlquick.Response(response_data, self.Request(), self.start_time, [])
             function(self, resp)
@@ -1134,7 +1134,7 @@ def mock_response(body=b"", headers=None, status=200, reason="OK"):
     def decorator(function):
         @wraps(function)
         def wrapper(self):
-            urlquick.CacheHandler.cache_cleanup(0)
+            urlquick.cache_cleanup(0)
 
             # Store original functions
             org_HTTPConnection = urlquick.HTTPConnection
