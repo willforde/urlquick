@@ -125,7 +125,7 @@ CACHEABLE_CODES = (200, 203, 204, 300, 301, 302, 303, 307, 308, 410, 414)
 REDIRECT_CODES = (301, 302, 303, 307, 308)
 
 #: The default max age of the cache in seconds is used when no max age is given in request.
-MAX_AGE = 14400
+MAX_AGE = 14400  # 4 Hours
 
 # Unique logger for this module
 logger = logging.getLogger("urlquick")
@@ -416,8 +416,6 @@ class CacheHandler(object):
         """
         max_age = MAX_AGE if max_age is None else max_age
         cache_dir = cls.cache_dir()
-        if not os.path.exists(cache_dir):
-            return None
 
         # Loop over all cache files and remove stale files
         filestart = cls.safe_path("cache-")
@@ -736,10 +734,6 @@ class UnicodeDict(dict):
                         key = make_unicode(key)
                         value = make_unicode(value)
                         self[key] = value
-
-                    # Remove item from dict if already added and value is None
-                    elif key in self:
-                        del self[key]
 
 
 def make_unicode(data, encoding="utf8", errors=""):
@@ -1154,21 +1148,18 @@ class Response(object):
             except UnicodeDecodeError:
                 logger.debug("Failed to decode content with given encoding: '%s'", self.encoding)
 
-        if not (self.encoding and getencoder(self.encoding) == getencoder(self.apparent_encoding)):
+        apparent_encoding = self.apparent_encoding
+        if apparent_encoding and not (self.encoding and getencoder(self.encoding) == getencoder(apparent_encoding)):
             logger.debug("Attempting to decode with default encoding: '%s'", self.apparent_encoding)
             try:
-                return self.content.decode(self.apparent_encoding)
+                return self.content.decode(apparent_encoding)
             except UnicodeDecodeError:
-                logger.debug("Failed to decode content with default encoding, "
-                             "switching to fallback encoding: 'iso-8859-1'")
+                logger.debug("Failed to decode content with default encoding: %s, "
+                             "switching to fallback encoding: 'iso-8859-1'", apparent_encoding)
         else:
             logger.debug("Attempting to decode with fallback encoding: 'iso-8859-1'")
 
-        try:
-            return self.content.decode("iso-8859-1")
-        except UnicodeDecodeError:
-            logger.debug("Failed to decode content with fallback encoding: 'iso-8859-1'")
-            raise
+        return self.content.decode("iso-8859-1")
 
     @CachedProperty
     def cookies(self):

@@ -1,3 +1,8 @@
 [run]
 source=urlquick
 branch = True
+
+[report]
+exclude_lines =
+    # Exclude code that can't be executed.
+    if sys.platform.startswith("win"):

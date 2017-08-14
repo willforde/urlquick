@@ -88,6 +88,7 @@ class TestMisc(unittest.TestCase):
         test_dict2 = {"test3": u"work3", u"test4": "work4"}
         test_dict3 = {"test5": None}
         test_dict = urlquick.UnicodeDict(test_dict1, test_dict2, test_dict3)
+
         # Check that all items are unicode
         for key, value in test_dict.items():
             self.assertIsInstance(key, unicode)
@@ -794,6 +795,7 @@ def create_resp(body=b"", headers=None, status=200, reason="OK"):
 
 class TestResponse(unittest.TestCase):
     start_time = urlquick.datetime.utcnow()
+
     class Request(object):
         def __init__(self):
             self.url = "https://httpbin.org/get"
@@ -847,13 +849,19 @@ class TestResponse(unittest.TestCase):
         with self.assertRaisesRegexp(urlquick.ContentError, "Unknown encoding:"):
             test = resp.content
 
-    @create_resp(b"data", headers={"Content-Type": "text/html; charset=utf-8"})
+    @create_resp(b"data\xc9\xb8", headers={"Content-Type": "text/html; charset=utf-8"})
     def test_text_with_encoding(self, resp):
         self.assertIsInstance(resp.text, unicode)
-        self.assertEqual(resp.text, u"data")
+        self.assertEqual(resp.text, u"dataɸ")
+
+    @create_resp(b"data\xc9\xb8", headers={"Content-Type": "text/html; charset=ascii"})
+    def test_text_with_encoding_fail(self, resp):
+        self.assertIsInstance(resp.text, unicode)
+        self.assertEqual(resp.text, u"dataɸ")
 
     @create_resp(b"data\xc9\xb8")
     def test_text_with_apparent_encoding(self, resp):
+        resp.apparent_encoding = "utf8"
         self.assertIsInstance(resp.text, unicode)
         self.assertEqual(resp.text, u"dataɸ")
 
@@ -863,11 +871,39 @@ class TestResponse(unittest.TestCase):
         self.assertIsInstance(resp.text, unicode)
         self.assertNotEqual(resp.text, u"dataɸ")
 
+    @create_resp(b"data")
+    def test_text_fallback(self, resp):
+        resp.encoding = None
+        resp.apparent_encoding = None
+        self.assertIsInstance(resp.text, unicode)
+        self.assertEqual(resp.text, u"data")
+
+    @create_resp(b"data\xc9\xb8")
+    def test_text_fallback_fail(self, resp):
+        resp.encoding = None
+        resp.apparent_encoding = None
+        self.assertIsInstance(resp.text, unicode)
+        self.assertNotEqual(resp.text, u"dataɸ")
+
+    @create_resp(b"data\xc9\xb8")
+    def test_text_with_no_encoding(self, resp):
+        resp.encoding = None
+        resp.apparent_encoding = None
+        self.assertIsInstance(resp.text, unicode)
+        self.assertNotEqual(resp.text, u"dataɸ")
+
     @create_resp(b'{"test": "work"}')
     def test_json(self, resp):
         data = resp.json()
         self.assertIsInstance(data, dict)
         self.assertDictEqual(data, {"test": "work"})
+
+    @create_resp(b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><base><data>Ya, this is data.</data></base>')
+    def test_xml(self, resp):
+        from xml.etree import ElementTree
+        data = resp.xml()
+        self.assertIsInstance(data, ElementTree.Element)
+        self.assertEqual(data.findtext(u"data"), u"Ya, this is data.")
 
     @create_resp(headers={"Set-Cookie": "test=yes"})
     def test_cookies(self, resp):
