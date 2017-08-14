@@ -41,7 +41,6 @@ requests: http://docs.python-requests.org/en/master/
 """
 
 # Standard library imports
-from __future__ import unicode_literals
 from collections import MutableMapping, defaultdict
 from codecs import open as _open, getencoder
 from base64 import b64encode, b64decode
