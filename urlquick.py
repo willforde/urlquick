@@ -858,7 +858,7 @@ class Session(ConnectionManager):
         Requests data from a specified resource.
     
         :param str url: Url of the remote resource.
-        :param dict params: (optional) Dictionary of url query key/value pairs.
+        :param dict params: [opt] Dictionary of url query key/value pairs.
         :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
     
         :return: A requests like Response object.
@@ -888,8 +888,8 @@ class Session(ConnectionManager):
         Submits data to be processed to a specified resource.
     
         :param str url: Url of the remote resource.
-        :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
-        :param json: (optional) Json data sent in the body of the Request.
+        :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+        :param json: [opt] Json data sent in the body of the Request.
         :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
     
         :return: A requests like Response object.
@@ -904,7 +904,7 @@ class Session(ConnectionManager):
         Uploads a representation of the specified URI.
     
         :param str url: Url of the remote resource.
-        :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+        :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
         :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
     
         :return: A requests like Response object.
@@ -917,7 +917,7 @@ class Session(ConnectionManager):
         Sends a PATCH request.
     
         :param str url: Url of the remote resource.
-        :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+        :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
         :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
     
         :return: A requests like Response object.
@@ -944,16 +944,16 @@ class Session(ConnectionManager):
     
         :param str method: HTTP request method, GET, HEAD, POST.
         :param str url: Url of the remote resource.
-        :param dict params: (optional) Dictionary of url query key/value pairs.
-        :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
-        :param json: (optional) Json data sent in the body of the Request.
-        :param dict headers: (optional) HTTP request headers.
-        :param dict cookies: (optional) Dictionary of cookies to send with the request.
-        :param tuple auth: (optional) (username, password) for basic authentication.
-        :param int timeout: (optional) Connection timeout in seconds.
-        :param bool allow_redirects: (optional) Enable/disable redirection. Defaults to ``True``.
-        :param bool raise_for_status: (optional) Raise's HTTPError if status code is > 400. Defaults to ``False``.
-        :param int max_age: (optional) Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
+        :param dict params: [opt] Dictionary of url query key/value pairs.
+        :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+        :param json: [opt] Json data sent in the body of the Request.
+        :param dict headers: [opt] HTTP request headers.
+        :param dict cookies: [opt] Dictionary of cookies to send with the request.
+        :param tuple auth: [opt] (username, password) for basic authentication.
+        :param int timeout: [opt] Connection timeout in seconds.
+        :param bool allow_redirects: [opt] Enable/disable redirection. Defaults to ``True``.
+        :param bool raise_for_status: [opt] Raise's HTTPError if status code is > 400. Defaults to ``False``.
+        :param int max_age: [opt] Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
                             Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
     
         :return: A requests like Response object.
@@ -1239,7 +1239,7 @@ class Response(object):
         """
         Returns the json-encoded content of a response.
 
-        :param kwargs: (Optional) Arguments that :func:`json.loads` takes.
+        :param kwargs: [opt] Arguments that :func:`json.loads` takes.
         :raises ValueError: If the response body does not contain valid json.
         """
         return _json.loads(self.text, **kwargs)
@@ -1259,9 +1259,9 @@ class Response(object):
         Iterates over the response data. The chunk size are the number of bytes it should read into memory.
         This is not necessarily the length of each item returned, as decoding can take place.
 
-        :param int chunk_size: (Optional) The chunk size to use for each chunk.
+        :param int chunk_size: [opt] The chunk size to use for each chunk.
                                (default=512)
-        :param bool decode_unicode: (Optional) ``True`` to return unicode, else ``False`` to return bytes.
+        :param bool decode_unicode: [opt] ``True`` to return unicode, else ``False`` to return bytes.
                                     (default=``False``)
         """
         content = self.text if decode_unicode else self.content
@@ -1279,10 +1279,10 @@ class Response(object):
         """
         Iterates over the response data, one line at a time.
 
-        :param int chunk_size: (Optional) Unused, here for compatibility with requests.
-        :param bool decode_unicode: (Optional) ``True`` to return unicode, else ``False`` to return bytes.
+        :param int chunk_size: [opt] Unused, here for compatibility with requests.
+        :param bool decode_unicode: [opt] ``True`` to return unicode, else ``False`` to return bytes.
                                     (default=``False``)
-        :param bytes delimiter: (Optional) Delimiter used as the end of line marker.
+        :param bytes delimiter: [opt] Delimiter used as the end of line marker.
                                 (default=b'\\\\n')
         """
         if decode_unicode:
@@ -1340,16 +1340,16 @@ def request(method, url, params=None, data=None, json=None, headers=None, cookie
 
     :param str method: HTTP request method, GET, HEAD, POST.
     :param str url: Url of the remote resource.
-    :param dict params: (optional) Dictionary of url query key/value pairs.
-    :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
-    :param json: (optional) Json data sent in the body of the Request.
-    :param dict headers: (optional) HTTP request headers.
-    :param dict cookies: (optional) Dictionary of cookies to send with the request.
-    :param tuple auth: (optional) (username, password) for basic authentication.
-    :param int timeout: (optional) Connection timeout in seconds.
-    :param bool allow_redirects: (optional) Enable/disable redirection. Defaults to ``True``.
-    :param bool raise_for_status: (optional) Raise's HTTPError if status code is > 400. Defaults to ``False``.
-    :param int max_age: (optional) Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
+    :param dict params: [opt] Dictionary of url query key/value pairs.
+    :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+    :param json: [opt] Json data sent in the body of the Request.
+    :param dict headers: [opt] HTTP request headers.
+    :param dict cookies: [opt] Dictionary of cookies to send with the request.
+    :param tuple auth: [opt] (username, password) for basic authentication.
+    :param int timeout: [opt] Connection timeout in seconds.
+    :param bool allow_redirects: [opt] Enable/disable redirection. Defaults to ``True``.
+    :param bool raise_for_status: [opt] Raise's HTTPError if status code is > 400. Defaults to ``False``.
+    :param int max_age: [opt] Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
                         Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
 
     :return: A requests like Response object.
@@ -1373,7 +1373,7 @@ def get(url, params=None, **kwargs):
     Requests data from a specified resource.
 
     :param str url: Url of the remote resource.
-    :param dict params: (optional) Dictionary of url query key/value pairs.
+    :param dict params: [opt] Dictionary of url query key/value pairs.
     :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
     :return: A requests like Response object.
@@ -1406,8 +1406,8 @@ def post(url, data=None, json=None, **kwargs):
     Submits data to be processed to a specified resource.
 
     :param str url: Url of the remote resource.
-    :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
-    :param json: (optional) Json data sent in the body of the Request.
+    :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+    :param json: [opt] Json data sent in the body of the Request.
     :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
     :return: A requests like Response object.
@@ -1424,7 +1424,7 @@ def put(url, data=None, **kwargs):
     Uploads a representation of the specified URI.
 
     :param str url: Url of the remote resource.
-    :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+    :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
     :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
     :return: A requests like Response object.
@@ -1439,7 +1439,7 @@ def patch(url, data=None, **kwargs):
     Sends a PATCH request.
 
     :param str url: Url of the remote resource.
-    :param data: (optional) Dictionary (will be form-encoded) or bytes sent in the body of the Request.
+    :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
     :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
 
     :return: A requests like Response object.
