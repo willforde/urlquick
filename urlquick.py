@@ -246,7 +246,6 @@ class CacheHandler(object):
         # Filepath to cache file
         cache_dir = self.cache_dir()
         self.cache_file = cache_file = os.path.join(cache_dir, uid)
-        print(cache_file)
         if os.path.exists(cache_file):
             self.response = self._load()
             if self.response is None:
@@ -342,7 +341,7 @@ class CacheHandler(object):
 
     def _save(self, **response):
         # Base64 encode the body to make it json serializable
-        response[u"body"] = b64encode(response[u"body"]).decode("ascii")
+        response[u"body"] = b64encode(response["body"]).decode("ascii")
 
         try:
             # Save the response to disk using json Serialization
