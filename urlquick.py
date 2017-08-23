@@ -40,6 +40,13 @@ urlfetch: https://github.com/ifduyue/urlfetch
 requests: http://docs.python-requests.org/en/master/
 """
 
+__all__ = ["request", "get", "head", "post", "put", "patch", "delete", "cache_cleanup", "Session"]
+__repo__ = "https://github.com/willforde/urlquick"
+__copyright__ = "Copyright (C) 2017 William Forde"
+__author__ = "William Forde"
+__license__ = "MIT"
+__version__ = "0.9.1"
+
 # Standard library imports
 from collections import MutableMapping, defaultdict
 from codecs import open as _open, getencoder
@@ -110,13 +117,6 @@ else:
 
         # Decode the output of urlencode back into unicode and return
         return _urlencode(new_query, doseq).decode("ascii")
-
-__all__ = ["request", "get", "head", "post", "put", "patch", "delete", "cache_cleanup", "Session"]
-__repo__ = "https://github.com/willforde/urlquick"
-__copyright__ = "Copyright (C) 2017 William Forde"
-__author__ = "William Forde"
-__license__ = "MIT"
-__version__ = "0.9.1"
 
 # Cacheable request types
 CACHEABLE_METHODS = (u"GET", u"HEAD", u"POST")
