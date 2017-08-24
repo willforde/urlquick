@@ -11,10 +11,10 @@ matrix:
       env: TOXENV=py35
     - python: "3.6"
       env: TOXENV=py36
-    - python: "pypy"
-      env: TOXENV=py36
+    - python: "pypy2"
+      env: TOXENV=pypy2
     - python: "pypy3"
-      env: TOXENV=py36
+      env: TOXENV=pypy3
 
 sudo: false
 
