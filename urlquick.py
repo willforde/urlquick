@@ -1342,8 +1342,8 @@ class Response(object):
         return "<Response [{}]>".format(self.status_code)
 
 
-def request(method, url, params=None, data=None, json=None, headers=None, cookies=None, auth=None,
-            timeout=10, allow_redirects=None, raise_for_status=None, max_age=None):
+def request(method, url, params=None, data=None, headers=None, cookies=None, auth=None,
+            timeout=10, allow_redirects=None, json=None, raise_for_status=None, max_age=None):
     """
     Make request for remote resource.
 
@@ -1351,12 +1351,12 @@ def request(method, url, params=None, data=None, json=None, headers=None, cookie
     :param str url: Url of the remote resource.
     :param dict params: [opt] Dictionary of url query key/value pairs.
     :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
-    :param json: [opt] Json data sent in the body of the Request.
     :param dict headers: [opt] HTTP request headers.
     :param dict cookies: [opt] Dictionary of cookies to send with the request.
     :param tuple auth: [opt] (username, password) for basic authentication.
     :param int timeout: [opt] Connection timeout in seconds.
     :param bool allow_redirects: [opt] Enable/disable redirection. Defaults to ``True``.
+    :param json: [opt] Json data sent in the body of the Request.
     :param bool raise_for_status: [opt] Raise's HTTPError if status code is > 400. Defaults to ``False``.
     :param int max_age: [opt] Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
                         Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
@@ -1371,8 +1371,8 @@ def request(method, url, params=None, data=None, json=None, headers=None, cookie
     :raises Timeout: If the connection to server timed out.
     """
     with Session() as session:
-        return session.request(method, url, params, data, json, headers, cookies, auth, timeout,
-                               allow_redirects, raise_for_status, max_age)
+        return session.request(method, url, params, data, headers, cookies, auth, timeout,
+                               allow_redirects, json, raise_for_status, max_age)
 
 
 def get(url, params=None, **kwargs):
