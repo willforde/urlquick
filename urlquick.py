@@ -45,7 +45,7 @@ __repo__ = "https://github.com/willforde/urlquick"
 __copyright__ = "Copyright (C) 2017 William Forde"
 __author__ = "William Forde"
 __license__ = "MIT"
-__version__ = "0.9.1"
+__version__ = "0.9.2"
 
 # Standard library imports
 from collections import MutableMapping, defaultdict
@@ -1262,6 +1262,28 @@ class Response(object):
         """
         from xml.etree import ElementTree
         return ElementTree.fromstring(self.content)
+
+    def parse(self, tag=u"", attrs=None):
+        """
+        Parse's "HTML" document into a element tree using HTMLement.
+
+        .. seealso:: The htmlement documentation can be found at.\n
+                     http://python-htmlement.readthedocs.io/en/stable/?badge=stable
+
+        :type tag: bytes or str
+        :param tag: [opt] Name of 'element' which is used to filter tree to required section.
+
+        :type attrs: dict
+        :param attrs: [opt] Attributes of 'element', used when searching for required section.
+                            Attrs should be a dict of unicode key/value pairs.
+
+        :return: The root element of the element tree.
+        :rtype: xml.etree.ElementTree.Element
+        """
+        from htmlement import HTMLement
+        parser = HTMLement(unicode(tag), attrs)
+        parser.feed(self.text)
+        return parser.close()
 
     def iter_content(self, chunk_size=512, decode_unicode=False):
         """
