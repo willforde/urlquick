@@ -898,6 +898,13 @@ class TestResponse(unittest.TestCase):
         self.assertIsInstance(data, ElementTree.Element)
         self.assertEqual(data.findtext(u"data"), u"Ya, this is data.")
 
+    @create_resp(b'<html><img src="http://myimages.com/myimage.jpg"/></html>')
+    def test_parse(self, resp):
+        root_elem = resp.parse()
+        assert root_elem.tag == "html"
+        assert root_elem[0].tag == "img"
+        assert root_elem[0].get("src") == "http://myimages.com/myimage.jpg"
+
     @create_resp(headers={"Set-Cookie": "test=yes"})
     def test_cookies(self, resp):
         self.assertIsInstance(resp.cookies, dict)
