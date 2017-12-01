@@ -1,3 +1,7 @@
 [run]
 source=urlquick
 branch = True
+
+[report]
+exclude_lines =
+    raise MissingDependency
