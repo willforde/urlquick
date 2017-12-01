@@ -173,6 +173,10 @@ class HTTPError(UrlError):
         return "HTTP {} Error {}: {}".format(error_type, self.code, self.msg)
 
 
+class MissingDependency(ImportError):
+    """Missing optional Dependency 'HTMLement'"""
+
+
 class CaseInsensitiveDict(MutableMapping):
     """
     A case-insensitive `dict` like object.
@@ -1279,11 +1283,17 @@ class Response(object):
 
         :return: The root element of the element tree.
         :rtype: xml.etree.ElementTree.Element
+
+        :raise MissingDependency: If the optional 'HTMLement' dependency is missing.
         """
-        from htmlement import HTMLement
-        parser = HTMLement(unicode(tag), attrs)
-        parser.feed(self.text)
-        return parser.close()
+        try:
+            from htmlement import HTMLement
+        except ImportError:
+            raise MissingDependency("Missing optional dependency named 'HTMLement'")
+        else:
+            parser = HTMLement(unicode(tag), attrs)
+            parser.feed(self.text)
+            return parser.close()
 
     def iter_content(self, chunk_size=512, decode_unicode=False):
         """
