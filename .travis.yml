@@ -18,6 +18,7 @@ sudo: false
 
 install:
   - pip install coveralls
+  - pip install htmlement
   - pip install tox
 
 script: tox
