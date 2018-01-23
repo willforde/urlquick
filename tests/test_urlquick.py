@@ -677,7 +677,16 @@ class TestConnectionManager(unittest.TestCase):
     def test_connect(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
         cm = urlquick.ConnectionManager()
-        resp = cm.connect(req, 10)
+        resp = cm.connect(req, 10, True)
+
+        self.assertIsInstance(resp, self.Response)
+        self.assertTrue("httpbin.org" in cm.request_handler["https"][1])
+        self.assertIsInstance(cm.request_handler["https"][1]["httpbin.org"], self.HTTPConnection)
+
+    def test_connect_unverify(self):
+        req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
+        cm = urlquick.ConnectionManager()
+        resp = cm.connect(req, 10, False)
 
         self.assertIsInstance(resp, self.Response)
         self.assertTrue("httpbin.org" in cm.request_handler["https"][1])
@@ -688,7 +697,7 @@ class TestConnectionManager(unittest.TestCase):
         self.Response.will_close = True
         try:
             cm = urlquick.ConnectionManager()
-            resp = cm.connect(req, 10)
+            resp = cm.connect(req, 10, True)
 
             self.assertIsInstance(resp, self.Response)
             self.assertFalse("httpbin.org" in cm.request_handler["https"][1])
@@ -699,7 +708,7 @@ class TestConnectionManager(unittest.TestCase):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
         cm = urlquick.ConnectionManager()
         cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection()
-        resp = cm.connect(req, 10)
+        resp = cm.connect(req, 10, True)
         self.assertIsInstance(resp, self.Response)
 
     def test_connect_reuse_bad(self):
@@ -708,7 +717,7 @@ class TestConnectionManager(unittest.TestCase):
         cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection(fail=urlquick.HTTPException)
         self.Response.will_close = True
         try:
-            resp = cm.connect(req, 10)
+            resp = cm.connect(req, 10, True)
             self.assertIsInstance(resp, self.Response)
             self.assertFalse("httpbin.org" in cm.request_handler["https"][1])
         finally:
@@ -719,7 +728,7 @@ class TestConnectionManager(unittest.TestCase):
         cm = urlquick.ConnectionManager()
         cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection(fail=RuntimeError)
         with self.assertRaises(RuntimeError):
-            cm.connect(req, 10)
+            cm.connect(req, 10, True)
 
     def test_send_request(self):
         conn = self.HTTPConnection()
@@ -1414,6 +1423,15 @@ class TestSession(unittest.TestCase):
     def test_redirect_force_get(self):
         with urlquick.Session() as session:
             resp = session.request(u"POST", "https://httpbin.org/redirect-to?status_code=308&url=%2Fget", data="testing", max_age=-1)
+            self.assertResponse(resp, Response)
+            self.assertEqual(resp.url, "https://httpbin.org/get")
+            self.assertEqual(resp.request.method, "GET")
+
+    @mock_response()
+    def test_unverify(self):
+        with urlquick.Session() as session:
+            resp = session.request(u"POST", "https://httpbin.org/redirect-to?status_code=308&url=%2Fget",
+                                   data="testing", verify=False, max_age=-1)
             self.assertResponse(resp, Response)
             self.assertEqual(resp.url, "https://httpbin.org/get")
             self.assertEqual(resp.request.method, "GET")

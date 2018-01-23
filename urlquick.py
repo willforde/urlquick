@@ -41,11 +41,8 @@ requests: http://docs.python-requests.org/en/master/
 """
 
 __all__ = ["request", "get", "head", "post", "put", "patch", "delete", "cache_cleanup", "Session"]
-__repo__ = "https://github.com/willforde/urlquick"
-__copyright__ = "Copyright (C) 2017 William Forde"
 __author__ = "William Forde"
-__license__ = "MIT"
-__version__ = "0.9.2"
+__version__ = "0.9.3"
 
 # Standard library imports
 from collections import MutableMapping, defaultdict
@@ -78,13 +75,13 @@ if py3:
 
     CACHE_LOCATION = os.getcwd()
 else:
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences, PyCompatibility
     from httplib import HTTPConnection, HTTPSConnection, HTTPException
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences, PyCompatibility
     from urlparse import urlsplit, urlunsplit, urljoin, SplitResult, parse_qsl as _parse_qsl
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences, PyCompatibility
     from urllib import urlencode as _urlencode, quote as _quote, unquote as _unquote
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences, PyCompatibility
     from Cookie import SimpleCookie
 
     CACHE_LOCATION = os.getcwdu()
@@ -510,7 +507,7 @@ class ConnectionManager(CacheAdapter):
         self.request_handler = {"http": (HTTPConnection, {}), "https": (HTTPSConnection, {})}
         super(ConnectionManager, self).__init__()
 
-    def make_request(self, req, timeout, max_age):
+    def make_request(self, req, timeout, verify, max_age):
         # Only check cache if max_age set to a valid value
         if max_age >= 0:
             cached_resp = self.cache_check(req.method, req.url, req.data, req.headers, max_age=max_age)
@@ -518,7 +515,7 @@ class ConnectionManager(CacheAdapter):
                 return cached_resp
 
             # Request resource and cache it if possible
-            resp = self.connect(req, timeout)
+            resp = self.connect(req, timeout, verify)
             callback = lambda: (resp.getheaders(), resp.read(), resp.status, resp.reason)
             cached_resp = self.handle_response(req.method, resp.status, callback)
             if cached_resp:
@@ -527,9 +524,9 @@ class ConnectionManager(CacheAdapter):
                 return resp
 
         # Default to un-cached response
-        return self.connect(req, timeout)
+        return self.connect(req, timeout, verify)
 
-    def connect(self, req, timeout):
+    def connect(self, req, timeout, verify):
         # Fetch connection from pool and attempt to reuse if available
         connection, pool = self.request_handler[req.type]
         if req.host in pool:
@@ -545,7 +542,9 @@ class ConnectionManager(CacheAdapter):
                     raise
 
         # Create a new connection
-        conn = connection(req.host, timeout=timeout)
+        # noinspection PyProtectedMember
+        context = ssl._create_unverified_context() if verify is False else None
+        conn = connection(req.host, timeout=timeout, context=context)
         response = self.send_request(conn, req)
 
         # Add connection to the pool if the response is not set to close
@@ -731,6 +730,7 @@ class Request(object):
 
     def _py2_header_items(self):
         """Return request headers with no unicode value to be compatible with python2"""
+        # noinspection PyCompatibility
         for key, value in self.headers.iteritems():
             key = key.encode("ascii")
             value = value.encode("iso-8859-1")
@@ -951,7 +951,7 @@ class Session(ConnectionManager):
         return self.request(u"DELETE", url, **kwargs)
 
     def request(self, method, url, params=None, data=None, headers=None, cookies=None, auth=None,
-                timeout=10, allow_redirects=None, json=None, raise_for_status=None, max_age=None):
+                timeout=10, allow_redirects=None, verify=True, json=None, raise_for_status=None, max_age=None):
         """
         Make request for remote resource.
     
@@ -964,6 +964,7 @@ class Session(ConnectionManager):
         :param tuple auth: [opt] (username, password) for basic authentication.
         :param int timeout: [opt] Connection timeout in seconds.
         :param bool allow_redirects: [opt] Enable/disable redirection. Defaults to ``True``.
+        :param bool verify: [opt] Controls whether to verify the server's TLS certificate. Defaults to ``True``
         :param json: [opt] Json data sent in the body of the Request.
         :param bool raise_for_status: [opt] Raise's HTTPError if status code is > 400. Defaults to ``False``.
         :param int max_age: [opt] Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
@@ -1016,7 +1017,7 @@ class Session(ConnectionManager):
 
         while True:
             # Send a request for resource
-            raw_resp = self.make_request(req, timeout, max_age)
+            raw_resp = self.make_request(req, timeout, verify, max_age)
             resp = Response(raw_resp, req, start_time, history[:])
 
             visited[req.url] += 1
@@ -1287,6 +1288,7 @@ class Response(object):
         :raise MissingDependency: If the optional 'HTMLement' dependency is missing.
         """
         try:
+            # noinspection PyUnresolvedReferences
             from htmlement import HTMLement
         except ImportError:
             raise MissingDependency("Missing optional dependency named 'HTMLement'")
@@ -1375,7 +1377,7 @@ class Response(object):
 
 
 def request(method, url, params=None, data=None, headers=None, cookies=None, auth=None,
-            timeout=10, allow_redirects=None, json=None, raise_for_status=None, max_age=None):
+            timeout=10, allow_redirects=None, verify=True, json=None, raise_for_status=None, max_age=None):
     """
     Make request for remote resource.
 
@@ -1388,6 +1390,7 @@ def request(method, url, params=None, data=None, headers=None, cookies=None, aut
     :param tuple auth: [opt] (username, password) for basic authentication.
     :param int timeout: [opt] Connection timeout in seconds.
     :param bool allow_redirects: [opt] Enable/disable redirection. Defaults to ``True``.
+    :param bool verify: [opt] Controls whether to verify the server's TLS certificate. Defaults to ``True``
     :param json: [opt] Json data sent in the body of the Request.
     :param bool raise_for_status: [opt] Raise's HTTPError if status code is > 400. Defaults to ``False``.
     :param int max_age: [opt] Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
@@ -1404,7 +1407,7 @@ def request(method, url, params=None, data=None, headers=None, cookies=None, aut
     """
     with Session() as session:
         return session.request(method, url, params, data, headers, cookies, auth, timeout,
-                               allow_redirects, json, raise_for_status, max_age)
+                               allow_redirects, verify, json, raise_for_status, max_age)
 
 
 def get(url, params=None, **kwargs):
