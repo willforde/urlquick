@@ -504,7 +504,7 @@ class CacheResponse(object):
 
 class ConnectionManager(CacheAdapter):
     def __init__(self):
-        self.request_handler = {"http": (HTTPConnection, {}), "https": (HTTPSConnection, {})}
+        self.request_handler = {"http": {}, "https": {}}
         super(ConnectionManager, self).__init__()
 
     def make_request(self, req, timeout, verify, max_age):
@@ -528,9 +528,10 @@ class ConnectionManager(CacheAdapter):
 
     def connect(self, req, timeout, verify):
         # Fetch connection from pool and attempt to reuse if available
-        connection, pool = self.request_handler[req.type]
+        pool = self.request_handler[req.type]
         if req.host in pool:
             try:
+                # noinspection PyTypeChecker
                 return self.send_request(pool[req.host], req)
             except Exception as e:
                 # Remove the connection from the pool as it's unusable
@@ -542,9 +543,14 @@ class ConnectionManager(CacheAdapter):
                     raise
 
         # Create a new connection
-        # noinspection PyProtectedMember
-        context = ssl._create_unverified_context() if verify is False else None
-        conn = connection(req.host, timeout=timeout, context=context)
+        if req.type == "https":
+            # noinspection PyProtectedMember
+            context = ssl._create_unverified_context() if verify is False else None
+            conn = HTTPSConnection(req.host, timeout=timeout, context=context)
+        else:
+            conn = HTTPConnection(req.host, timeout=timeout)
+
+        # Make first connection to server
         response = self.send_request(conn, req)
 
         # Add connection to the pool if the response is not set to close
@@ -577,7 +583,7 @@ class ConnectionManager(CacheAdapter):
 
     def close(self):
         """Close all persistent connections and remove."""
-        for _, pool in self.request_handler.values():
+        for pool in self.request_handler.values():
             for key in list(pool.keys()):
                 conn = pool.pop(key)
                 conn.close()

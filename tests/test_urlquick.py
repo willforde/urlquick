@@ -680,8 +680,8 @@ class TestConnectionManager(unittest.TestCase):
         resp = cm.connect(req, 10, True)
 
         self.assertIsInstance(resp, self.Response)
-        self.assertTrue("httpbin.org" in cm.request_handler["https"][1])
-        self.assertIsInstance(cm.request_handler["https"][1]["httpbin.org"], self.HTTPConnection)
+        self.assertTrue("httpbin.org" in cm.request_handler["https"])
+        self.assertIsInstance(cm.request_handler["https"]["httpbin.org"], self.HTTPConnection)
 
     def test_connect_unverify(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
@@ -689,8 +689,17 @@ class TestConnectionManager(unittest.TestCase):
         resp = cm.connect(req, 10, False)
 
         self.assertIsInstance(resp, self.Response)
-        self.assertTrue("httpbin.org" in cm.request_handler["https"][1])
-        self.assertIsInstance(cm.request_handler["https"][1]["httpbin.org"], self.HTTPConnection)
+        self.assertTrue("httpbin.org" in cm.request_handler["https"])
+        self.assertIsInstance(cm.request_handler["https"]["httpbin.org"], self.HTTPConnection)
+
+    def test_connect_unverify_http(self):
+        req = urlquick.Request("GET", "http://httpbin.org/get", urlquick.CaseInsensitiveDict())
+        cm = urlquick.ConnectionManager()
+        resp = cm.connect(req, 10, False)
+
+        self.assertIsInstance(resp, self.Response)
+        self.assertTrue("httpbin.org" in cm.request_handler["http"])
+        self.assertIsInstance(cm.request_handler["http"]["httpbin.org"], self.HTTPConnection)
 
     def test_connect_will_close(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
@@ -700,33 +709,33 @@ class TestConnectionManager(unittest.TestCase):
             resp = cm.connect(req, 10, True)
 
             self.assertIsInstance(resp, self.Response)
-            self.assertFalse("httpbin.org" in cm.request_handler["https"][1])
+            self.assertFalse("httpbin.org" in cm.request_handler["https"])
         finally:
             self.Response.will_close = False
 
     def test_connect_reuse_good(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
         cm = urlquick.ConnectionManager()
-        cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection()
+        cm.request_handler["https"]["httpbin.org"] = self.HTTPConnection()
         resp = cm.connect(req, 10, True)
         self.assertIsInstance(resp, self.Response)
 
     def test_connect_reuse_bad(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
         cm = urlquick.ConnectionManager()
-        cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection(fail=urlquick.HTTPException)
+        cm.request_handler["https"]["httpbin.org"] = self.HTTPConnection(fail=urlquick.HTTPException)
         self.Response.will_close = True
         try:
             resp = cm.connect(req, 10, True)
             self.assertIsInstance(resp, self.Response)
-            self.assertFalse("httpbin.org" in cm.request_handler["https"][1])
+            self.assertFalse("httpbin.org" in cm.request_handler["https"])
         finally:
             self.Response.will_close = False
 
     def test_connect_reuse_ugly(self):
         req = urlquick.Request("GET", "https://httpbin.org/get", urlquick.CaseInsensitiveDict())
         cm = urlquick.ConnectionManager()
-        cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection(fail=RuntimeError)
+        cm.request_handler["https"]["httpbin.org"] = self.HTTPConnection(fail=RuntimeError)
         with self.assertRaises(RuntimeError):
             cm.connect(req, 10, True)
 
@@ -772,9 +781,9 @@ class TestConnectionManager(unittest.TestCase):
 
     def test_close_connections(self):
         cm = urlquick.ConnectionManager()
-        cm.request_handler["https"][1]["httpbin.org"] = self.HTTPConnection()
+        cm.request_handler["https"]["httpbin.org"] = self.HTTPConnection()
         cm.close()
-        self.assertFalse(cm.request_handler["https"][1])
+        self.assertFalse(cm.request_handler["https"])
 
 
 def create_resp(body=b"", headers=None, status=200, reason="OK"):
