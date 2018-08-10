@@ -93,7 +93,6 @@ ENV/
 # PyCharm
 .idea/
 
-# Temp
-pytestfull
 docs/_static/
 docs/_templates/
+.pytest_cache/
