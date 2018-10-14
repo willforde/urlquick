@@ -42,7 +42,7 @@ requests: http://docs.python-requests.org/en/master/
 
 __all__ = ["request", "get", "head", "post", "put", "patch", "delete", "cache_cleanup", "Session"]
 __author__ = "William Forde"
-__version__ = "0.9.3"
+__version__ = "0.9.4"
 
 # Standard library imports
 from collections import MutableMapping, defaultdict
