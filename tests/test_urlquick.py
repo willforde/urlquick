@@ -518,6 +518,10 @@ class TestRequest(unittest.TestCase):
         req = urlquick.Request("get", "https://httpbin.org/get?test=yes", urlquick.CaseInsensitiveDict())
         self.assertEqual(req.url, "https://httpbin.org/get?test=yes")
 
+    def test_url_query_empty_param(self):
+        req = urlquick.Request("get", "https://httpbin.org/get?test=yes&q=", urlquick.CaseInsensitiveDict())
+        self.assertEqual(req.url, "https://httpbin.org/get?test=yes&q=")
+
     def test_url_query_nont_ascii(self):
         req = urlquick.Request("get", u"https://httpbin.org/get?test=\u0278", urlquick.CaseInsensitiveDict())
         self.assertEqual(req.url, u"https://httpbin.org/get?test=%C9%B8")
