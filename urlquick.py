@@ -52,6 +52,7 @@ __version__ = "0.9.4"
 # Standard library imports
 from codecs import open as _open, getencoder
 from base64 import b64encode, b64decode
+from collections import defaultdict
 from datetime import datetime
 import json as _json
 import logging
@@ -74,7 +75,7 @@ if py3:
     # noinspection PyUnresolvedReferences, PyCompatibility
     from http.cookies import SimpleCookie
     # noinspection PyUnresolvedReferences, PyCompatibility
-    from collections.abc import MutableMapping, defaultdict
+    from collections.abc import MutableMapping
 
     # Under kodi this constant is set to the addon data directory
     # code for whitch is at the bottom of this file
@@ -92,7 +93,7 @@ else:
     # noinspection PyUnresolvedReferences, PyCompatibility
     from Cookie import SimpleCookie
     # noinspection PyUnresolvedReferences, PyCompatibility
-    from collections import MutableMapping, defaultdict
+    from collections import MutableMapping
 
     # Under kodi this constant is set to the addon data directory
     # code for whitch is at the bottom of this file
