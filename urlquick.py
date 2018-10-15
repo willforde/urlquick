@@ -70,10 +70,9 @@ if py3:
     # noinspection PyUnresolvedReferences
     from http.cookies import SimpleCookie
 
+    CACHE_LOCATION = os.getcwd()  # Disable when running under kodi
     # noinspection PyShadowingBuiltins
     unicode = str
-
-    CACHE_LOCATION = os.getcwd()
 else:
     # noinspection PyUnresolvedReferences, PyCompatibility
     from httplib import HTTPConnection, HTTPSConnection, HTTPException
@@ -84,8 +83,7 @@ else:
     # noinspection PyUnresolvedReferences, PyCompatibility
     from Cookie import SimpleCookie
 
-    CACHE_LOCATION = os.getcwdu()
-
+    CACHE_LOCATION = os.getcwdu()  # Disable when running under kodi
 
     def quote(data, safe=b"/", encoding="utf8", errors="strict"):
         data = data.encode(encoding, errors)
