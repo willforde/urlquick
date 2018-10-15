@@ -63,11 +63,11 @@ import os
 # Check python version to set the object that can detect non unicode strings
 py3 = sys.version_info >= (3, 0)
 if py3:
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences, PyCompatibility
     from http.client import HTTPConnection, HTTPSConnection, HTTPException
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences, PyCompatibility
     from urllib.parse import urlsplit, urlunsplit, urljoin, SplitResult, urlencode, parse_qsl, quote, unquote
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences, PyCompatibility
     from http.cookies import SimpleCookie
 
     # Under kodi this constant is set to the addon data directory
