@@ -70,7 +70,10 @@ if py3:
     # noinspection PyUnresolvedReferences
     from http.cookies import SimpleCookie
 
-    CACHE_LOCATION = os.getcwd()  # Disable when running under kodi
+    # Under kodi this constant is set to the addon data directory
+    # code for whitch is at the bottom of this file
+    CACHE_LOCATION = os.getcwd()
+
     # noinspection PyShadowingBuiltins
     unicode = str
 else:
@@ -83,7 +86,9 @@ else:
     # noinspection PyUnresolvedReferences, PyCompatibility
     from Cookie import SimpleCookie
 
-    CACHE_LOCATION = os.getcwdu()  # Disable when running under kodi
+    # Under kodi this constant is set to the addon data directory
+    # code for whitch is at the bottom of this file
+    CACHE_LOCATION = os.getcwdu()
 
     def quote(data, safe=b"/", encoding="utf8", errors="strict"):
         data = data.encode(encoding, errors)
@@ -779,6 +784,9 @@ class Session(ConnectionManager):
     :ivar int max_age: Max age the cache can be, before it’s considered stale. -1 will disable caching.
                        Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
     """
+    # This is here so the kodi related code can change
+    # this value to True for a better kodi expereance.
+    default_raise_for_status = False
 
     def __init__(self, **kwargs):
         super(Session, self).__init__()
@@ -801,7 +809,7 @@ class Session(ConnectionManager):
         self.max_repeats = kwargs.get("max_repeats", 4)
         self.max_redirects = kwargs.get("max_redirects", 10)
         self.allow_redirects = kwargs.get("allow_redirects", True)
-        self.raise_for_status = kwargs.get("raise_for_status", False)
+        self.raise_for_status = kwargs.get("raise_for_status", self.default_raise_for_status)
 
     @property
     def auth(self):
@@ -1279,8 +1287,7 @@ class Response(object):
         .. seealso:: The htmlement documentation can be found at.\n
                      http://python-htmlement.readthedocs.io/en/stable/?badge=stable
 
-        :type tag: bytes or str
-        :param tag: [opt] Name of 'element' which is used to filter tree to required section.
+        :param str tag: [opt] Name of 'element' which is used to filter tree to required section.
 
         :type attrs: dict
         :param attrs: [opt] Attributes of 'element', used when searching for required section.
@@ -1509,3 +1516,24 @@ def delete(url, **kwargs):
     """
     with Session() as session:
         return session.request(u"DELETE", url, **kwargs)
+
+
+#############
+# Kodi Only #
+#############
+
+# # Set the loaction of the cache file to the addon data directory
+# _addon_data = __import__("xbmcaddon").Addon()
+# _CACHE_LOCATION = __import__("xbmc").translatePath(_addon_data.getAddonInfo("profile"))
+# CACHE_LOCATION = _CACHE_LOCATION.decode("utf8") if isinstance(_CACHE_LOCATION, bytes) else _CACHE_LOCATION
+# Session.default_raise_for_status = True
+#
+# # Last cleanup execution time
+# _setting_name = "cache_cleanup_timestamp"
+# _setting_value = _addon_data.getSetting(_setting_name)
+# _current_time = time.time()
+#
+# # Checks if it's time to initiate a cache cleanup
+# if _setting_value == "" or (_current_time - float(_setting_value) > 60 * 60 * 24 * 28):
+#     cache_cleanup(60 * 60 * 24 * 14)
+#     _addon_data.setSetting(_setting_name, str(_current_time))
