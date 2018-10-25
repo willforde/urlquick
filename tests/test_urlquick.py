@@ -490,6 +490,16 @@ class TestCacheHandler(unittest.TestCase):
         else:
             self.assertIsInstance(ret, bytes)
 
+    def test_save_path_force_win(self):
+        org = sys.platform
+        try:
+            sys.platform = "win32"
+            ret = urlquick.CacheHandler.safe_path(u"testpath")
+        finally:
+            sys.platform = org
+
+        self.assertIsInstance(ret, unicode)
+
 
 class TestRequest(unittest.TestCase):
     def test_with_host(self):

@@ -124,7 +124,7 @@ else:
         for key, value in items:
             key = key.encode(encoding, errors)
             if isinstance(value, (list, tuple)):
-                value = [_value.encode(encoding, errors) for _value in value]
+                value = [_value.encode(encoding, errors) for _value in value]  # pragma: no branch
             else:
                 value = value.encode(encoding, errors)
             new_query.append((key, value))
