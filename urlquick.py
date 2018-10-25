@@ -1022,8 +1022,7 @@ class Session(ConnectionManager):
         # Parse url into it's individual components including params if given
         req = Request(method, url, req_headers, data, json, req_params)
         logger.debug("Requesting resource: %s", req.url)
-        if req_headers:
-            logger.debug("Request headers: %s", req.headers)
+        logger.debug("Request headers: %s", req.headers)
         if data:
             logger.debug("Request data: %s", req.data)
 
