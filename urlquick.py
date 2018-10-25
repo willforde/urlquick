@@ -112,7 +112,7 @@ else:
     def parse_qsl(qs, encoding="utf8", errors="replace", **kwargs):
         qs = qs.encode(encoding, errors)
         qsl = _parse_qsl(qs, **kwargs)
-        return [(key.decode(encoding, errors), value.decode(encoding, errors)) for key, value in qsl]
+        return [(k.decode(encoding, errors), v.decode(encoding, errors)) for k, v in qsl]  # pragma: no branch
 
 
     def urlencode(query, doseq=False, encoding="utf8", errors=""):
