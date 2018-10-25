@@ -16,8 +16,8 @@ import logging
 import ssl
 from random import random
 from functools import wraps
-
 from collections import OrderedDict, defaultdict
+
 if urlquick.py3:
     unicode = str
     from gzip import compress as gzip_compress
@@ -421,6 +421,19 @@ class TestCacheHandler(unittest.TestCase):
             # Check that no error is raised
             urlquick.cache_cleanup(99999999)
             self.assertTrue(os.path.exists(cache.cache_file))
+
+    def test_cleanup_invalid_file(self):
+        cache_dir = urlquick.CacheHandler.cache_dir()
+        tempfile = os.path.join(cache_dir, urlquick.CacheHandler.safe_path("temp.tmp"))
+        open(tempfile, 'a').close()
+
+        try:
+            with self.create("https://httpbin.org/get") as cache:
+                # Check that no error is raised
+                urlquick.cache_cleanup(0)
+                self.assertFalse(os.path.exists(cache.cache_file))
+        finally:
+            os.remove(tempfile)
 
     def test_cache_check_fresh(self):
         with self.create("https://httpbin.org/get"):
