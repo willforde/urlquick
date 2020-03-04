@@ -423,28 +423,6 @@ class CacheHandler(object):
         return self.response is not None
 
 
-def cache_cleanup(max_age=None):
-    """
-    Remove all stale cache files.
-
-    :param int max_age: [opt] The max age the cache can be before removal.
-                        defaults => :data:`MAX_AGE <urlquick.MAX_AGE>`
-    """
-    handler = CacheHandler
-    max_age = MAX_AGE if max_age is None else max_age
-    cache_dir = handler.cache_dir()
-
-    # Loop over all cache files and remove stale files
-    filestart = handler.safe_path(u"cache-")
-    for cachefile in os.listdir(cache_dir):
-        # Check that we actually have a cache file
-        if cachefile.startswith(filestart):
-            cache_path = os.path.join(cache_dir, cachefile)
-            # Check if the cache is not fresh and delete if so
-            if not handler.isfilefresh(cache_path, max_age):
-                handler.delete(cache_path)
-
-
 class CacheAdapter(object):
     def __init__(self):
         self.__cache = None
@@ -886,11 +864,11 @@ class Session(ConnectionManager):
         Sends a GET request.
 
         Requests data from a specified resource.
-    
+
         :param str url: Url of the remote resource.
         :param dict params: [opt] Dictionary of url query key/value pairs.
         :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
-    
+
         :return: A requests like Response object.
         :rtype: urlquick.Response
         """
@@ -900,12 +878,12 @@ class Session(ConnectionManager):
     def head(self, url, **kwargs):
         """
         Sends a HEAD request.
-    
+
         Same as GET but returns only HTTP headers and no document body.
-    
+
         :param str url: Url of the remote resource.
         :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
-    
+
         :return: A requests like Response object.
         :rtype: urlquick.Response
         """
@@ -914,14 +892,14 @@ class Session(ConnectionManager):
     def post(self, url, data=None, json=None, **kwargs):
         """
         Sends a POST request.
-    
+
         Submits data to be processed to a specified resource.
-    
+
         :param str url: Url of the remote resource.
         :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
         :param json: [opt] Json data sent in the body of the Request.
         :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
-    
+
         :return: A requests like Response object.
         :rtype: urlquick.Response
         """
@@ -930,13 +908,13 @@ class Session(ConnectionManager):
     def put(self, url, data=None, **kwargs):
         """
         Sends a PUT request.
-    
+
         Uploads a representation of the specified URI.
-    
+
         :param str url: Url of the remote resource.
         :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
         :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
-    
+
         :return: A requests like Response object.
         :rtype: urlquick.Response
         """
@@ -945,11 +923,11 @@ class Session(ConnectionManager):
     def patch(self, url, data=None, **kwargs):
         """
         Sends a PATCH request.
-    
+
         :param str url: Url of the remote resource.
         :param data: [opt] Dictionary (will be form-encoded) or bytes sent in the body of the Request.
         :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
-    
+
         :return: A requests like Response object.
         :rtype: urlquick.Response
         """
@@ -958,10 +936,10 @@ class Session(ConnectionManager):
     def delete(self, url, **kwargs):
         """
         Sends a DELETE request.
-    
+
         :param str url: Url of the remote resource.
         :param kwargs: Optional arguments that :func:`request <urlquick.request>` takes.
-    
+
         :return: A requests like Response object.
         :rtype: urlquick.Response
         """
@@ -971,7 +949,7 @@ class Session(ConnectionManager):
                 timeout=10, allow_redirects=None, verify=True, json=None, raise_for_status=None, max_age=None):
         """
         Make request for remote resource.
-    
+
         :param str method: HTTP request method, GET, HEAD, POST.
         :param str url: Url of the remote resource.
         :param dict params: [opt] Dictionary of url query key/value pairs.
@@ -986,10 +964,10 @@ class Session(ConnectionManager):
         :param bool raise_for_status: [opt] Raise's HTTPError if status code is > 400. Defaults to ``False``.
         :param int max_age: [opt] Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
                             Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
-    
+
         :return: A requests like Response object.
         :rtype: urlquick.Response
-        
+
         :raises MaxRedirects: If too many redirects was detected.
         :raises ConnError: If connection to server failed.
         :raises HTTPError: If response status is greater or equal to 400 and raise_for_status is ``True``.
@@ -1147,7 +1125,7 @@ class Response(object):
     def content(self):
         """
         Content of the response in bytes.
-        
+
         :raises ContentError: If content failes to decompress.
         """
         # Check if Response need to be decoded, else return raw response
@@ -1170,7 +1148,7 @@ class Response(object):
     def text(self):
         """
         Content of the response in unicode.
-        
+
         The response content will be decoded using the best available encoding based on the response headers.
         Will fallback to :data:`apparent_encoding <urlquick.Response.apparent_encoding>`
         if no encoding was given within headers.
@@ -1364,7 +1342,7 @@ class Response(object):
     def raise_for_status(self):
         """
         Raises stored error, if one occurred.
-        
+
         :raises HTTPError: If response status code is greater or equal to 400
         """
         # According to RFC 2616, "2xx" code indicates that the client's
@@ -1414,7 +1392,7 @@ def request(method, url, params=None, data=None, headers=None, cookies=None, aut
 
     :return: A requests like Response object.
     :rtype: urlquick.Response
-    
+
     :raises MaxRedirects: If too many redirects was detected.
     :raises ConnError: If connection to server failed.
     :raises HTTPError: If response status is greater or equal to 400 and raise_for_status is ``True``.
@@ -1523,22 +1501,65 @@ def delete(url, **kwargs):
         return session.request(u"DELETE", url, **kwargs)
 
 
+def cache_cleanup(max_age=None):
+    """
+    Remove all stale cache files.
+
+    :param int max_age: [opt] The max age the cache can be before removal.
+                        defaults => :data:`MAX_AGE <urlquick.MAX_AGE>`
+    """
+    logger.info("Initiating cache cleanup")
+
+    handler = CacheHandler
+    max_age = MAX_AGE if max_age is None else max_age
+    cache_dir = handler.cache_dir()
+
+    # Loop over all cache files and remove stale files
+    filestart = handler.safe_path(u"cache-")
+    for cachefile in os.listdir(cache_dir):
+        # Check that we actually have a cache file
+        if cachefile.startswith(filestart):
+            cache_path = os.path.join(cache_dir, cachefile)
+            # Check if the cache is not fresh and delete if so
+            if not handler.isfilefresh(cache_path, max_age):
+                handler.delete(cache_path)
+
+
+def auto_cache_cleanup(max_age=60 * 60 * 24 * 14):
+    """
+    Check if the cache needs cleanup. Uses a empty file to keep track.
+
+    :param int max_age: [opt] The max age the cache can be before removal.
+                        defaults => 1209600 (14 days)
+
+    :returns: True if cache was cleaned else false if no cache cleanup was started.
+    :rtype: bool
+    """
+    check_file = os.path.join(CACHE_LOCATION, "cache_check")
+    last_check = os.stat(check_file).st_mtime if os.path.exists(check_file) else 0
+    current_time = time.time()
+
+    # Check if it's time to initiate a cache cleanup
+    if current_time - last_check > max_age * 2:
+        cache_cleanup(max_age)
+        try:
+            os.utime(check_file, None)
+        except OSError:
+            open(check_file, "a").close()
+        return True
+    return False
+
+
 #############
 # Kodi Only #
 #############
 
-# # Set the loaction of the cache file to the addon data directory
-# _addon_data = __import__("xbmcaddon").Addon()
+# Set the location of the cache file to the addon data directory
+# _addon_data = __import__("xbmcaddon").Addon("plugin.video.science.friday")
 # _CACHE_LOCATION = __import__("xbmc").translatePath(_addon_data.getAddonInfo("profile"))
 # CACHE_LOCATION = _CACHE_LOCATION.decode("utf8") if isinstance(_CACHE_LOCATION, bytes) else _CACHE_LOCATION
+# logger.debug("Cache location: %s", CACHE_LOCATION)
 # Session.default_raise_for_status = True
-#
-# # Last cleanup execution time
-# _setting_name = "cache_cleanup_timestamp"
-# _setting_value = _addon_data.getSetting(_setting_name)
-# _current_time = time.time()
-#
-# # Checks if it's time to initiate a cache cleanup
-# if _setting_value == "" or (_current_time - float(_setting_value) > 60 * 60 * 24 * 28):
-#     cache_cleanup(60 * 60 * 24 * 14)
-#     _addon_data.setSetting(_setting_name, str(_current_time))
+
+# Check if cache cleanup is required
+auto_cache_cleanup()
