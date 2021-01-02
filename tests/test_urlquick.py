@@ -211,8 +211,8 @@ class TestCacheHandler(unittest.TestCase):
             if isinstance(url, unicode):
                 url = url.encode("utf8")
 
-            hash_url = urlquick.CacheHandler.hash_url(url)
-            path = urlquick.CacheHandler.cache_dir()
+            hash_url = urlquick.CacheInterface.hash_url(url)
+            path = urlquick.CacheInterface.cache_dir()
             cache_file = os.path.join(path, hash_url)
 
             # Save the response to disk using json Serialization
@@ -220,7 +220,7 @@ class TestCacheHandler(unittest.TestCase):
                 json.dump(response, stream, indent=4, separators=(",", ":"))
 
             print(cache_file)
-            self.cache = urlquick.CacheHandler(hash_url, max_age)
+            self.cache = urlquick.CacheInterface(hash_url, max_age)
 
         def __enter__(self):
             return self.cache
@@ -240,16 +240,16 @@ class TestCacheHandler(unittest.TestCase):
         os.makedirs = makedirs
 
         try:
-            path = urlquick.CacheHandler.cache_dir()
+            path = urlquick.CacheInterface.cache_dir()
             self.assertTrue(bool(path))
         finally:
             os.path.exists = _exists
             os.makedirs = _makedirs
 
     def test_isfilefresh(self):
-        fresh = urlquick.CacheHandler.isfilefresh(__file__, 0)
+        fresh = urlquick.CacheInterface.isfilefresh(__file__, 0)
         self.assertFalse(fresh)
-        fresh = urlquick.CacheHandler.isfilefresh(__file__, 999999999)
+        fresh = urlquick.CacheInterface.isfilefresh(__file__, 999999999)
         self.assertTrue(fresh)
 
     def test_init(self):
@@ -307,22 +307,22 @@ class TestCacheHandler(unittest.TestCase):
             self.assertEqual(req_headers["If-modified-since"], "Wed, 21 Oct 2015 07:28:00 GMT")
 
     def assert_url_hash_Equal(self, url_hash, check):
-        self.assertEqual(url_hash, urlquick.CacheHandler.safe_path(check))
+        self.assertEqual(url_hash, urlquick.CacheInterface.safe_path(check))
 
     def test_hash_url_unicode(self):
-        hashurl = urlquick.CacheHandler.hash_url(u"https://httpbin.org/get")
+        hashurl = urlquick.CacheInterface.hash_url(u"https://httpbin.org/get")
         self.assert_url_hash_Equal(hashurl, "cache-eadd3f1d0242ca5f05c4c7b89188df7eadc72976")
 
     def test_hash_url_bytes(self):
-        hashurl = urlquick.CacheHandler.hash_url(b"https://httpbin.org/get")
+        hashurl = urlquick.CacheInterface.hash_url(b"https://httpbin.org/get")
         self.assert_url_hash_Equal(hashurl, "cache-eadd3f1d0242ca5f05c4c7b89188df7eadc72976")
 
     def test_hash_url_data_unicode(self):
-        hashurl = urlquick.CacheHandler.hash_url("https://httpbin.org/get", data=u"data")
+        hashurl = urlquick.CacheInterface.hash_url("https://httpbin.org/get", data=u"data")
         self.assert_url_hash_Equal(hashurl, "cache-da991148ea2a035a6f4204b33265ac70b42b0c4b")
 
     def test_hash_url_data_bytes(self):
-        hashurl = urlquick.CacheHandler.hash_url("https://httpbin.org/get", data=b"data")
+        hashurl = urlquick.CacheInterface.hash_url("https://httpbin.org/get", data=b"data")
         self.assert_url_hash_Equal(hashurl, "cache-da991148ea2a035a6f4204b33265ac70b42b0c4b")
 
     def test_failed_delete(self):
@@ -370,8 +370,8 @@ class TestCacheHandler(unittest.TestCase):
         _dump = json.dump
         json.dump = dump
 
-        url = urlquick.CacheHandler.hash_url("https://httpbin.org/get")
-        cache = urlquick.CacheHandler(url)
+        url = urlquick.CacheInterface.hash_url("https://httpbin.org/get")
+        cache = urlquick.CacheInterface(url)
 
         try:
             cache.update({}, b"data", 200, "OK")
@@ -386,8 +386,8 @@ class TestCacheHandler(unittest.TestCase):
         _dump = json.dump
         json.dump = dump
 
-        url = urlquick.CacheHandler.hash_url("https://httpbin.org/get")
-        cache = urlquick.CacheHandler(url)
+        url = urlquick.CacheInterface.hash_url("https://httpbin.org/get")
+        cache = urlquick.CacheInterface(url)
 
         try:
             cache.update({}, b"data", 200, "OK")
@@ -396,15 +396,15 @@ class TestCacheHandler(unittest.TestCase):
             json.dump = _dump
 
     def test_update_transfer_encoding(self):
-        url = urlquick.CacheHandler.hash_url("https://httpbin.org/get")
-        cache = urlquick.CacheHandler(url)
+        url = urlquick.CacheInterface.hash_url("https://httpbin.org/get")
+        cache = urlquick.CacheInterface(url)
 
         cache.update({"Transfer-Encoding": "true"}, b"data", 200, "OK")
         self.assertFalse("Transfer-Encoding" in cache.response.headers)
 
     def test_update_case_headers(self):
-        url = urlquick.CacheHandler.hash_url("https://httpbin.org/get")
-        cache = urlquick.CacheHandler(url)
+        url = urlquick.CacheInterface.hash_url("https://httpbin.org/get")
+        cache = urlquick.CacheInterface(url)
 
         headers = urlquick.CaseInsensitiveDict({"Transfer-Encoding": "true"})
         cache.update(headers, b"data", 200, "OK")
@@ -484,7 +484,7 @@ class TestCacheHandler(unittest.TestCase):
             self.assertIsNone(ret)
 
     def test_save_path_uni(self):
-        ret = urlquick.CacheHandler.safe_path(u"testpath")
+        ret = urlquick.CacheInterface.safe_path(u"testpath")
         if sys.platform.startswith("win"):
             self.assertIsInstance(ret, unicode)
         else:
