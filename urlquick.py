@@ -54,6 +54,7 @@ from functools import wraps
 from codecs import open
 import logging
 import hashlib
+import sqlite3
 import time
 import sys
 import os
@@ -186,63 +187,20 @@ class Response(requests.Response):
 
 # noinspection PyShadowingNames
 class CacheInterface(object):
-    def __init__(self, cache_location, max_age, request):
-        url_hash = self.hash_url(request)
-        self.cache_file = os.path.join(cache_location, u"cache-{}.pickle".format(url_hash))
+    def __init__(self, record, max_age):
         self.max_age = max_age
-        self.response = None
-
-        if os.path.exists(self.cache_file):
-            self.response = self.get_cache()
-
-    # noinspection PyMethodMayBeStatic
-    def hash_url(self, request):
-        """Return url as a sha1 encoded hash."""
-        url = request.url.encode("utf8") if isinstance(request.url, type(u"")) else request.url
-        method = request.method.encode("utf8") if isinstance(request.method, type(u"")) else request.method
-        return hashlib.sha1(b''.join((method, url, request.body or b''))).hexdigest()
-
-    def get_cache(self):
-        try:
-            # Attempt to read the cached response
-            with open(self.cache_file, "rb") as stream:
-                return pickle.load(stream)
-
-        except (pickle.PickleError, ValueError):
-            logger.exception("Cache Error: Failed to deserialize cached response.")
-            self.delete()
-
-    def set_cache(self, resp):
-        try:
-            # Attempt to save response to cache
-            with open(self.cache_file, "wb") as stream:
-                pickle.dump(resp, stream, protocol=pickle.HIGHEST_PROTOCOL)
-                self.response = resp
-
-        except pickle.PickleError:
-            logger.exception("Cache Error: Failed to deserialize response.")
-            self.delete()
-
-    def delete(self):
-        """Delete cache from disk."""
-        try:
-            os.remove(self.cache_file)
-        except EnvironmentError:
-            logger.error("Faild to remove cache: %s", self.cache_file)
+        self.key, response, self.cached_date = record
+        self.response = pickle.loads(response)
 
     def isfresh(self):
         """Return True if cache is fresh else False."""
         # Check that the response is of status 301 or that the cache is not older than the max age
-        if self.response is None or self.max_age == 0:
+        if self.max_age == 0:
             return False
         elif self.response.status_code in REDIRECT_CODES or self.max_age == -1:
             return True
         else:
-            return (time.time() - os.stat(self.cache_file).st_mtime) < self.max_age
-
-    def refresh(self):
-        """Refresh the cache by seting the last modified timestamp to the current time."""
-        os.utime(self.cache_file, None)  # None will tell utime to use current time
+            return (time.time() - self.cached_date) < self.max_age
 
     def add_conditional_headers(self, headers):
         """Return a dict of conditional headers from cache."""
@@ -255,36 +213,66 @@ class CacheInterface(object):
         if "Last-modified" in cached_headers:
             headers["If-modified-since"] = cached_headers["Last-Modified"]
 
-    def __bool__(self):
-        return self.response is not None
-
-    def __nonzero__(self):
-        return self.response is not None
-
-    @classmethod
-    def cache_response(cls, cache_location, max_age, req, resp):
-        # type: (str, int, requests.PreparedRequest, Response) -> Response
-        """Cache a requests response."""
-        cache = cls(cache_location, max_age, req)
-        cache.set_cache(resp)
-        return cache.response
-
 
 class CacheHTTPAdapter(adapters.HTTPAdapter):
     def __init__(self, cache_location, *args, **kwargs):
         super(CacheHTTPAdapter, self).__init__(*args, **kwargs)
-        self.cache_location = cache_location = os.path.join(cache_location, ".urlquick_cache")
 
         # Create any missing directorys
+        self.cache_location = cache_location
+        self.cache_file = os.path.join(cache_location, ".urlquick.slite3")
         if not os.path.exists(cache_location):
             os.makedirs(cache_location)
+
+        self.db, self.cur = self.db_connect()
+
+    # noinspection PyMethodMayBeStatic
+    def hash_url(self, request):
+        """Return url as a sha1 encoded hash."""
+        url = request.url.encode("utf8") if isinstance(request.url, type(u"")) else request.url
+        method = request.method.encode("utf8") if isinstance(request.method, type(u"")) else request.method
+        return hashlib.sha1(b''.join((method, url, request.body or b''))).hexdigest()
+
+    def db_connect(self):
+        db = sqlite3.connect(self.cache_file, timeout=1)
+        cur = db.cursor()
+        db.isolation_level = None
+
+        # Create cache table
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS urlcache (
+            key TEXT PRIMARY KEY NOT NULL,
+            response BLOB NOT NULL,
+            cached_date TIMESTAMP NOT NULL,
+            max_age INTEGER
+        )
+        """)
+        db.commit()
+
+        return db, cur
+
+    def get_cache(self, request, max_age):  # type: (...) -> CacheInterface
+        urlhash = self.hash_url(request)
+        query = """SELECT key, response, cached_date FROM urlcache WHERE key = ?"""
+        result = self.cur.execute(query, (urlhash,))
+        record = result.fetchone()
+        if record is not None:
+            return CacheInterface(record, max_age)
+
+    def set_cache(self, request, resp, max_age):
+        urlhash = self.hash_url(request)
+        query = "REPLACE INTO urlcache (key, response, cached_date, max_age) VALUES (?,?,?,?)"
+        presp = pickle.dumps(resp, protocol=pickle.HIGHEST_PROTOCOL)
+        data = (urlhash, presp, time.time(), max_age)
+        self.cur.execute(query, data)
+        return resp
 
     # noinspection PyShadowingNames
     def send(self, request, **kwargs):
         # Check if request has a valid cache and return it
         max_age = int(request.headers.pop("x-cache-max-age"))
         if request.method in CACHEABLE_METHODS:
-            cache = CacheInterface(self.cache_location, max_age, request)
+            cache = self.get_cache(request, max_age)
             if cache and cache.isfresh():
                 return cache.response
             elif cache:
@@ -306,7 +294,7 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
         # Cache any cacheable responses
         elif request.method in CACHEABLE_METHODS and response.status_code in CACHEABLE_CODES:
             logger.debug("Caching %s %s response", response.status_code, response.reason)
-            response = CacheInterface.cache_response(self.cache_location, max_age, request, response)
+            response = self.set_cache(request, response, max_age)
 
         return response
 
