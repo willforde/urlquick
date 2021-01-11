@@ -184,6 +184,12 @@ class Response(requests.Response):
         self.__dict__.update(response.__dict__)
         return self
 
+    def __conform__(self, protocol):
+        """Convert Response to a sql blob."""
+        if protocol is sqlite3.PrepareProtocol:
+            data = pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
+            return sqlite3.Binary(data)
+
 
 # noinspection PyShadowingNames
 class CacheInterface(object):
@@ -239,12 +245,11 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
         db.isolation_level = None
 
         # Create cache table
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS urlcache (
+        cur.execute("""CREATE TABLE IF NOT EXISTS urlcache (
             key TEXT PRIMARY KEY NOT NULL,
-            response BLOB NOT NULL,
+            response PICKLE NOT NULL,
             cached_date TIMESTAMP NOT NULL,
-            max_age INTEGER
+            max_age INTEGER NOT NULL
         )
         """)
         db.commit()
@@ -262,8 +267,7 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
     def set_cache(self, request, resp, max_age):
         urlhash = self.hash_url(request)
         query = "REPLACE INTO urlcache (key, response, cached_date, max_age) VALUES (?,?,?,?)"
-        presp = pickle.dumps(resp, protocol=pickle.HIGHEST_PROTOCOL)
-        data = (urlhash, presp, time.time(), max_age)
+        data = (urlhash, resp, time.time(), max_age)
         self.cur.execute(query, data)
         return resp
 
