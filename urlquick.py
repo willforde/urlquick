@@ -51,11 +51,10 @@ __version__ = "0.9.4"
 
 # Standard Lib
 from functools import wraps
-from codecs import open
+import warnings
 import logging
 import hashlib
 import sqlite3
-import time
 import sys
 import os
 
@@ -66,11 +65,23 @@ except ImportError:
     import pickle  # Works for both python 2 & 3
 
 # Third Party
+from requests.structures import CaseInsensitiveDict
 from requests import adapters
 from requests import sessions
 from requests import *
 import requests
 
+# Change some values if running within Kodi
+try:
+    # noinspection PyUnresolvedReferences
+    import xbmcvfs, xbmc, xbmcaddon
+    _addon_data = xbmcaddon.Addon()
+    _translatePath = xbmcvfs.translatePath if hasattr(xbmcvfs, "translatePath") else xbmc.translatePath
+    _CACHE_LOCATION = _translatePath(_addon_data.getAddonInfo("profile"))
+    _DEFAULT_RAISE_FOR_STATUS = True
+except ImportError:
+    _CACHE_LOCATION = os.path.join(os.getcwd(), ".cache")
+    _DEFAULT_RAISE_FOR_STATUS = False
 
 # Check for python 2, for compatibility
 py2 = sys.version_info.major == 2
@@ -102,10 +113,15 @@ REDIRECT_CODES = {
 }
 
 #: The default location for the cached files
-CACHE_LOCATION = os.path.join(os.getcwd(), ".cache")
+CACHE_LOCATION = _CACHE_LOCATION
 
-#: The default max age of the cache, value is in seconds.
-MAX_AGE = 14400  # 4 Hours
+#: The time in seconds where a cache item is considered stale.
+#: Stale items will stay in the database to allow for conditional headers.
+MAX_AGE = 60*60*4  # 4 Hours
+
+#: The time in seconds where a cache item is considered expired.
+#: Expired items will be removed from the database.
+EXPIRES = 60*60*24*7  # 1 week
 
 # Function components to wrap when overriding requests functions
 WRAPPER_ASSIGNMENTS = ["__doc__"]
@@ -140,8 +156,6 @@ class MissingDependency(ImportError):
 
 
 class Response(requests.Response):
-    """A Response object containing all data returned from the server."""
-
     def xml(self):
         """
         Parse's "XML" document into a element tree.
@@ -182,7 +196,7 @@ class Response(requests.Response):
             return parser.close()
 
     @classmethod
-    def prepare_response(cls, response):
+    def extend_response(cls, response):
         self = cls()
         self.__dict__.update(response.__dict__)
         return self
@@ -198,8 +212,8 @@ class CacheRecord(object):
     """SQL cache data record."""
 
     def __init__(self, record):  # type: (sqlite3.Row) -> None
-        self._fresh = record["fresh"] or self._response.status_code in REDIRECT_CODES
-        self._response = pickle.loads(record["response"])
+        self._response = response = pickle.loads(record["response"])
+        self._fresh = record["fresh"] or response.status_code in REDIRECT_CODES
 
     @property
     def response(self):  # type: () -> Response
@@ -209,7 +223,7 @@ class CacheRecord(object):
     def isfresh(self):  # type: () -> bool
         return self._fresh
 
-    def add_conditional_headers(self, headers):
+    def add_conditional_headers(self, headers):  # type: (CaseInsensitiveDict) -> None
         """Return a dict of conditional headers from cache."""
         # Fetch cached headers
         cached_headers = self._response.headers
@@ -222,9 +236,12 @@ class CacheRecord(object):
 
 
 class CacheHTTPAdapter(adapters.HTTPAdapter):
-    def __init__(self, cache_location, *args, **kwargs):
+    """Requests adapter that handels https requests and caches them for later use."""
+
+    def __init__(self, cache_location, *args, **kwargs):  # type: (str, ..., ...) -> None
         super(CacheHTTPAdapter, self).__init__(*args, **kwargs)
         # sqlite3.enable_callback_tracebacks(True)
+        self._closed = False
 
         # Create any missing directorys
         self.cache_file = os.path.join(cache_location, ".urlquick.slite3")
@@ -233,6 +250,7 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
 
         # Connect to database
         self.conn = self.connect()
+        self.clean()  # Remove expired
 
     def connect(self):  # type: () -> sqlite3.Connection
         """Connect to SQLite Database."""
@@ -242,14 +260,16 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
             raise CacheError(str(e))
         else:
             conn.row_factory = sqlite3.Row
-            # conn.isolation_level = None
-            conn.execute("""
-            CREATE TABLE IF NOT EXISTS urlcache
-            (
-                key TEXT PRIMARY KEY NOT NULL,
-                response BLOB NOT NULL,
-                cached_date TIMESTAMP NOT NULL
-            )""")
+            with conn:
+                conn.execute("""CREATE TABLE IF NOT EXISTS urlcache(
+                    key TEXT PRIMARY KEY NOT NULL,
+                    response BLOB NOT NULL,
+                    cached_date TIMESTAMP NOT NULL
+                )""")
+
+                # Performance tweak may cause curruption errors
+                # But not an issue as the database will be re-created if so
+                conn.execute("PRAGMA journal_mode=MEMORY")
 
         return conn
 
@@ -270,9 +290,11 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
             else:
                 raise e
 
-    def close(self):  # type: () -> None
-        self.conn.cursor().close()
-        self.conn.close()
+    def close(self):
+        if self._closed is False:
+            self.conn.cursor().close()
+            self.conn.close()
+            self._closed = True
 
     # noinspection PyMethodMayBeStatic, PyShadowingNames
     def hash_url(self, request):  # type: (PreparedRequest) -> str
@@ -300,17 +322,20 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
 
     def reset_cache(self, urlhash):  # type: (str) -> None
         """Reset the cached date to current time."""
-        self.execute("UPDATE urlcache SET cached_date=strftime('%s', 'now') WHERE key=?", (urlhash,))
+        self.execute(
+            "UPDATE urlcache SET cached_date=strftime('%s', 'now') WHERE key=?",
+            (urlhash,)
+        )
 
-    def clean(self, max_age=60*60*24*7):  # type: (int) -> None
+    def clean(self, expires=EXPIRES):  # type: (int) -> None
         """Clean the database of expired caches."""
         self.execute(
             "DELETE FROM urlcache WHERE strftime('%s', 'now') - strftime('%s', cached_date, 'unixepoch') > ?",
-            (max_age,)
+            (expires,)
         )
 
     # noinspection PyShadowingNames
-    def send(self, request, **kwargs):
+    def send(self, request, **kwargs):  # type: (PreparedRequest, ...) -> Response
         max_age = int(request.headers.pop("x-cache-max-age"))
         urlhash = self.hash_url(request)
 
@@ -344,39 +369,36 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
 
         return response
 
-    def build_response(self, req, resp):
+    def build_response(self, req, resp):  # type: (PreparedRequest, requests.Response) -> Response
         """Replace response object with our customized version."""
         resp = super(CacheHTTPAdapter, self).build_response(req, resp)
-        return Response.prepare_response(resp)
+        return Response.extend_response(resp)
 
 
 class Session(sessions.Session):
-    # This is here so the kodi related code can change
-    # this value to True for a better kodi expereance.
-    default_raise_for_status = False
-
-    def __init__(self, cache_location=CACHE_LOCATION, **kwargs):
+    def __init__(self, cache_location=CACHE_LOCATION, **kwargs):  # type: (str, ...) -> None
         super(Session, self).__init__()
 
         #: When set to True, This attribute checks if the status code of the
         #: response is between 400 and 600 to see if there was a client error
         #: or a server error. Raising a :class:`HTTPError` if so.
-        self.raise_for_status = kwargs.get("raise_for_status", self.default_raise_for_status)
+        self.raise_for_status = kwargs.get("raise_for_status", _DEFAULT_RAISE_FOR_STATUS)
 
         #: Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
         #: Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
         self.max_age = kwargs.get("max_age", MAX_AGE)
 
-        self.adapter = adapter = CacheHTTPAdapter(cache_location)
+        adapter = CacheHTTPAdapter(cache_location)
         self.mount("https://", adapter)
         self.mount("http://", adapter)
 
     def _raise_for_status(self, response, raise_for_status):  # type: (Response, bool) -> None
-        """Raise error if status code is between 400 and 600."""
+        """Raise :class:`HTTPError` if status code is between 400 and 600."""
         if self.raise_for_status if raise_for_status is None else raise_for_status:
             response.raise_for_status()
 
     def _merge_max_age(self, max_age):  # type: (int) -> int
+        """Return a valid max age. Use session value if request did not containe one."""
         return (-1 if self.max_age is None else self.max_age) if max_age is None else max_age
 
     def request(self, *args, **kwargs):  # type: (...) -> Response
@@ -403,7 +425,7 @@ class Session(sessions.Session):
         return response
 
     # noinspection PyShadowingNames
-    def send(self, request, **kwargs):  # type: (...) -> Response
+    def send(self, request, **kwargs):  # type: (PreparedRequest, ...) -> Response
         # If the headers does not contain 'x-cache-internal' then this method
         # must be getting called directly, so check for extra parameters
         if request.headers.pop("x-cache-internal", None):
@@ -487,54 +509,12 @@ def session():  # type: (...) -> Session
     return Session()
 
 
+# noinspection PyUnusedLocal
 def cache_cleanup(max_age=None):
-    """
-    Remove all stale cache files.
-
-    :param int max_age: [opt] The max age the cache can be before removal.
-                        defaults => :data:`MAX_AGE <urlquick.MAX_AGE>`
-    """
-    logger.info("Initiating cache cleanup")
-    with Session() as s:
-        # noinspection PyUnresolvedReferences
-        s.adapter.clean(max_age)
+    warnings.warn("No longer Needed", DeprecationWarning)
 
 
-def auto_cache_cleanup(max_age=60*60*24*14):
-    """
-    Check if the cache needs cleanup. Uses a empty file to keep track.
-
-    :param int max_age: [opt] The max age the cache can be before removal.
-                        defaults => 1209600 (14 days)
-
-    :returns: True if cache was cleaned else false if no cache cleanup was started.
-    :rtype: bool
-    """
-    check_file = os.path.join(CACHE_LOCATION, ".urlquick_check")
-    last_check = os.stat(check_file).st_mtime if os.path.exists(check_file) else 0
-    current_time = time.time()
-
-    # Check if it's time to initiate a cache cleanup
-    if current_time - last_check > max_age * 2:
-        cache_cleanup(max_age)
-        try:
-            os.utime(check_file, None)
-        except OSError:
-            open(check_file, "a").close()
-        return True
-    return False
-
-
-#############
-# Kodi Only #
-#############
-
-# Set the location of the cache file to the addon data directory
-# _addon_data = __import__("xbmcaddon").Addon()
-# _CACHE_LOCATION = __import__("xbmc").translatePath(_addon_data.getAddonInfo("profile"))
-# CACHE_LOCATION = _CACHE_LOCATION.decode("utf8") if isinstance(_CACHE_LOCATION, bytes) else _CACHE_LOCATION
-# logger.debug("Cache location: %s", CACHE_LOCATION)
-# Session.default_raise_for_status = True
-
-# Check if cache cleanup is required
-# auto_cache_cleanup()
+# noinspection PyUnusedLocal
+def auto_cache_cleanup(max_age=None):
+    warnings.warn("No longer Needed", DeprecationWarning)
+    return True
