@@ -65,7 +65,6 @@ try:
 except ImportError:
     import pickle  # Works for both python 2 & 3
 
-
 # Third Party
 from requests import adapters
 from requests import sessions
@@ -132,6 +131,10 @@ class ConnError(ConnectionError):
     pass
 
 
+class CacheError(RequestException):
+    pass
+
+
 class MissingDependency(ImportError):
     """Missing optional Dependency"""
 
@@ -191,27 +194,25 @@ class Response(requests.Response):
             return sqlite3.Binary(data)
 
 
-# noinspection PyShadowingNames
-class CacheInterface(object):
-    def __init__(self, record, max_age):
-        self.max_age = max_age
-        self.key, response, self.cached_date = record
-        self.response = pickle.loads(response)
+class CacheRecord(object):
+    """SQL cache data record."""
 
-    def isfresh(self):
-        """Return True if cache is fresh else False."""
-        # Check that the response is of status 301 or that the cache is not older than the max age
-        if self.max_age == 0:
-            return False
-        elif self.response.status_code in REDIRECT_CODES or self.max_age == -1:
-            return True
-        else:
-            return (time.time() - self.cached_date) < self.max_age
+    def __init__(self, record):  # type: (sqlite3.Row) -> None
+        self._fresh = record["fresh"] or self._response.status_code in REDIRECT_CODES
+        self._response = pickle.loads(record["response"])
+
+    @property
+    def response(self):  # type: () -> Response
+        return self._response
+
+    @property
+    def isfresh(self):  # type: () -> bool
+        return self._fresh
 
     def add_conditional_headers(self, headers):
         """Return a dict of conditional headers from cache."""
         # Fetch cached headers
-        cached_headers = self.response.headers
+        cached_headers = self._response.headers
 
         # Check for conditional headers
         if "Etag" in cached_headers:
@@ -223,64 +224,105 @@ class CacheInterface(object):
 class CacheHTTPAdapter(adapters.HTTPAdapter):
     def __init__(self, cache_location, *args, **kwargs):
         super(CacheHTTPAdapter, self).__init__(*args, **kwargs)
+        # sqlite3.enable_callback_tracebacks(True)
 
         # Create any missing directorys
-        self.cache_location = cache_location
         self.cache_file = os.path.join(cache_location, ".urlquick.slite3")
         if not os.path.exists(cache_location):
             os.makedirs(cache_location)
 
-        self.db, self.cur = self.db_connect()
+        # Connect to database
+        self.conn = self.connect()
 
-    # noinspection PyMethodMayBeStatic
-    def hash_url(self, request):
+    def connect(self):  # type: () -> sqlite3.Connection
+        """Connect to SQLite Database."""
+        try:
+            conn = sqlite3.connect(self.cache_file, timeout=1)
+        except sqlite3.Error as e:
+            raise CacheError(str(e))
+        else:
+            conn.row_factory = sqlite3.Row
+            # conn.isolation_level = None
+            conn.execute("""
+            CREATE TABLE IF NOT EXISTS urlcache
+            (
+                key TEXT PRIMARY KEY NOT NULL,
+                response BLOB NOT NULL,
+                cached_date TIMESTAMP NOT NULL
+            )""")
+
+        return conn
+
+    def execute(self, query, values=(), repeat=False):  # type: (str, tuple, bool) -> sqlite3.Cursor
+        """Execute SQL Query."""
+        try:
+            with self.conn:
+                # Automatically commits or rolls back on exception
+                return self.conn.execute(query, values)
+        except (sqlite3.IntegrityError, sqlite3.OperationalError) as e:
+            # Check if database is currupted
+            if repeat is False and (str(e).find("file is encrypted") > -1 or str(e).find("not a database") > -1):
+                logger.debug("Corrupted database detected, Cleaning...")
+                self.close()
+                os.remove(self.cache_file)
+                self.conn = self.connect()
+                return self.execute(query, values, repeat=True)
+            else:
+                raise e
+
+    def close(self):  # type: () -> None
+        self.conn.cursor().close()
+        self.conn.close()
+
+    # noinspection PyMethodMayBeStatic, PyShadowingNames
+    def hash_url(self, request):  # type: (PreparedRequest) -> str
         """Return url as a sha1 encoded hash."""
         url = request.url.encode("utf8") if isinstance(request.url, type(u"")) else request.url
         method = request.method.encode("utf8") if isinstance(request.method, type(u"")) else request.method
         return hashlib.sha1(b''.join((method, url, request.body or b''))).hexdigest()
 
-    def db_connect(self):
-        db = sqlite3.connect(self.cache_file, timeout=1)
-        cur = db.cursor()
-        db.isolation_level = None
-
-        # Create cache table
-        cur.execute("""CREATE TABLE IF NOT EXISTS urlcache (
-            key TEXT PRIMARY KEY NOT NULL,
-            response PICKLE NOT NULL,
-            cached_date TIMESTAMP NOT NULL,
-            max_age INTEGER NOT NULL
-        )
-        """)
-        db.commit()
-
-        return db, cur
-
-    def get_cache(self, request, max_age):  # type: (...) -> CacheInterface
-        urlhash = self.hash_url(request)
-        query = """SELECT key, response, cached_date FROM urlcache WHERE key = ?"""
-        result = self.cur.execute(query, (urlhash,))
+    def get_cache(self, urlhash, max_age):  # type: (str, int) -> CacheRecord
+        """Return a cached response if one exists."""
+        result = self.execute("""SELECT key, response, 
+        CASE WHEN ? == -1 THEN 1 ELSE strftime('%s', 'now') - strftime('%s', cached_date, 'unixepoch') < ? END AS fresh 
+        FROM urlcache WHERE key = ?""", (max_age, max_age, urlhash))
         record = result.fetchone()
         if record is not None:
-            return CacheInterface(record, max_age)
+            return CacheRecord(record)
 
-    def set_cache(self, request, resp, max_age):
-        urlhash = self.hash_url(request)
-        query = "REPLACE INTO urlcache (key, response, cached_date, max_age) VALUES (?,?,?,?)"
-        data = (urlhash, resp, time.time(), max_age)
-        self.cur.execute(query, data)
+    def set_cache(self, urlhash, resp):  # type: (str, Response) -> Response
+        """Save a response to database and return original response."""
+        self.execute(
+            "REPLACE INTO urlcache (key, response, cached_date) VALUES (?,?,strftime('%s', 'now'))",
+            (urlhash, resp)
+        )
         return resp
+
+    def reset_cache(self, urlhash):  # type: (str) -> None
+        """Reset the cached date to current time."""
+        self.execute("UPDATE urlcache SET cached_date=strftime('%s', 'now') WHERE key=?", (urlhash,))
+
+    def clean(self, max_age=60*60*24*7):  # type: (int) -> None
+        """Clean the database of expired caches."""
+        self.execute(
+            "DELETE FROM urlcache WHERE strftime('%s', 'now') - strftime('%s', cached_date, 'unixepoch') > ?",
+            (max_age,)
+        )
 
     # noinspection PyShadowingNames
     def send(self, request, **kwargs):
-        # Check if request has a valid cache and return it
         max_age = int(request.headers.pop("x-cache-max-age"))
+        urlhash = self.hash_url(request)
+
+        # Check if request has a valid cache and return it
         if request.method in CACHEABLE_METHODS:
-            cache = self.get_cache(request, max_age)
-            if cache and cache.isfresh():
+            cache = self.get_cache(urlhash, max_age)
+            if cache and cache.isfresh:
+                logger.debug("Cache is fresh")
                 return cache.response
             elif cache:
                 # Allows for Not Modified check
+                logger.debug("Cache is stale, adding conditional headers to request")
                 cache.add_conditional_headers(request.headers)
         else:
             cache = None
@@ -292,13 +334,13 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
         if cache and response.status_code == codes.not_modified:
             logger.debug("Server return 304 Not Modified response, using cached response")
             response.close()
-            cache.refresh()
+            self.reset_cache(urlhash)
             return cache.response
 
         # Cache any cacheable responses
         elif request.method in CACHEABLE_METHODS and response.status_code in CACHEABLE_CODES:
             logger.debug("Caching %s %s response", response.status_code, response.reason)
-            response = self.set_cache(request, response, max_age)
+            response = self.set_cache(urlhash, response)
 
         return response
 
@@ -323,9 +365,9 @@ class Session(sessions.Session):
 
         #: Age the 'cache' can be, before it’s considered stale. -1 will disable caching.
         #: Defaults to :data:`MAX_AGE <urlquick.MAX_AGE>`
-        self.max_age = max_age = kwargs.get("max_age", MAX_AGE)
+        self.max_age = kwargs.get("max_age", MAX_AGE)
 
-        adapter = CacheHTTPAdapter(cache_location, max_age)
+        self.adapter = adapter = CacheHTTPAdapter(cache_location)
         self.mount("https://", adapter)
         self.mount("http://", adapter)
 
@@ -445,14 +487,6 @@ def session():  # type: (...) -> Session
     return Session()
 
 
-
-
-
-
-
-
-
-
 def cache_cleanup(max_age=None):
     """
     Remove all stale cache files.
@@ -461,23 +495,12 @@ def cache_cleanup(max_age=None):
                         defaults => :data:`MAX_AGE <urlquick.MAX_AGE>`
     """
     logger.info("Initiating cache cleanup")
-
-    handler = CacheInterface
-    max_age = MAX_AGE if max_age is None else max_age
-    cache_dir = handler.cache_dir()
-
-    # Loop over all cache files and remove stale files
-    filestart = handler.safe_path(u"cache-")
-    for cachefile in os.listdir(cache_dir):
-        # Check that we actually have a cache file
-        if cachefile.startswith(filestart):
-            cache_path = os.path.join(cache_dir, cachefile)
-            # Check if the cache is not fresh and delete if so
-            if not handler.isfilefresh(cache_path, max_age):
-                handler.delete(cache_path)
+    with Session() as s:
+        # noinspection PyUnresolvedReferences
+        s.adapter.clean(max_age)
 
 
-def auto_cache_cleanup(max_age=60 * 60 * 24 * 14):
+def auto_cache_cleanup(max_age=60*60*24*14):
     """
     Check if the cache needs cleanup. Uses a empty file to keep track.
 
@@ -487,7 +510,7 @@ def auto_cache_cleanup(max_age=60 * 60 * 24 * 14):
     :returns: True if cache was cleaned else false if no cache cleanup was started.
     :rtype: bool
     """
-    check_file = os.path.join(CACHE_LOCATION, "cache_check")
+    check_file = os.path.join(CACHE_LOCATION, ".urlquick_check")
     last_check = os.stat(check_file).st_mtime if os.path.exists(check_file) else 0
     current_time = time.time()
 
