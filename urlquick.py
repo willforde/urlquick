@@ -260,16 +260,15 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
             raise CacheError(str(e))
         else:
             conn.row_factory = sqlite3.Row
-            with conn:
-                conn.execute("""CREATE TABLE IF NOT EXISTS urlcache(
-                    key TEXT PRIMARY KEY NOT NULL,
-                    response BLOB NOT NULL,
-                    cached_date TIMESTAMP NOT NULL
-                )""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS urlcache(
+                key TEXT PRIMARY KEY NOT NULL,
+                response BLOB NOT NULL,
+                cached_date TIMESTAMP NOT NULL
+            )""")
 
-                # Performance tweak may cause curruption errors
-                # But not an issue as the database will be re-created if so
-                conn.execute("PRAGMA journal_mode=MEMORY")
+            # Performance tweak may cause curruption errors
+            # But not an issue as the database will be re-created if so
+            conn.execute("PRAGMA journal_mode=MEMORY")
 
         return conn
 
