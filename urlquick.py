@@ -3,7 +3,7 @@
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2017 William Forde
+# Copyright (c) 2021 William Forde
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy of
 # this software and associated documentation files (the "Software"), to deal in
@@ -23,31 +23,26 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
-Urlquick
+Urlquick2
 --------
-A light-weight http client with requests like interface. Featuring persistent connections and caching support.
-This project was originally created for use by Kodi add-ons, but has grown into something more.
-I found, that while requests has a very nice interface, there was a noticeable lag when importing the library.
-The other option available is to use urllib2, but then you loose the benefit of persistent connections that requests
-have. Hence the reason for this project.
 
-All GET, HEAD and POST requests are cached locally for a period of 4 hours. When the cache expires,
-conditional headers are added to a new request e.g. "Etag" and "Last-modified". Then if the server
-returns a 304 Not-Modified response, the cache is reused, saving having to re-download the content body.
+Urlquick2 is a wrapper for requests that add's support for http caching.
+It act's just like requests but with a few extra parameters and features.
+'Requests' itself is left untouched.
 
-Inspired by: urlfetch & requests
-urlfetch: https://github.com/ifduyue/urlfetch
-requests: http://docs.python-requests.org/en/master/
+All GET, HEAD and POST requests are cached locally for a period of 4 hours, this can be changed. When the cache expires,
+conditional headers are added to any new request e.g. "Etag" and "Last-modified". Then if the server
+returns a 304 Not-Modified response, the cache is used, saving having to re-download the content body.
 
-Github: https://github.com/willforde/urlquick
+Github: https://github.com/willforde/urlquick2
 Documentation: http://urlquick.readthedocs.io/en/stable/?badge=stable
-Testing: https://travis-ci.org/willforde/urlquick
-Code Coverage: https://coveralls.io/github/willforde/urlquick?branch=master
-Code Quality: https://app.codacy.com/app/willforde/urlquick/dashboard
+Testing: https://travis-ci.org/willforde/urlquick2
+Code Coverage: https://coveralls.io/github/willforde/urlquick2?branch=master
+Code Quality: https://app.codacy.com/app/willforde/urlquick2/dashboard
 """
 
 __all__ = ["Session"]
-__version__ = "0.9.4"
+__version__ = "2.0.0"
 
 # Standard Lib
 from functools import wraps
@@ -88,6 +83,7 @@ py2 = sys.version_info.major == 2
 
 # Unique logger for this module
 logger = logging.getLogger("urlquick")
+logging.captureWarnings(True)
 
 # Cacheable Codes & Methods
 CACHEABLE_METHODS = {"GET", "HEAD", "POST"}
