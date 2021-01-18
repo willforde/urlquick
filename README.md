@@ -22,8 +22,6 @@ Usage
 >>> r = urlquick.get('https://httpbin.org/ip')
 
 # View response data.
->>> r.status_code
-200
 >>> r.json()
 {'ip': '172.69.48.124'}
 ```
