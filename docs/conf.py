@@ -21,7 +21,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../'))
 
 # Fetch version number
-from urlquick import __version__, __copyright__, __author__
+from urlquick import __version__
 
 
 # -- General configuration ------------------------------------------------
@@ -51,8 +51,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'urlquick'
-copyright = __copyright__
-author = __author__
+copyright = "2017, William Forde"
+author = "willforde"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
