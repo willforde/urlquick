@@ -23,8 +23,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
-Urlquick2
---------
+Urlquick II
+-----------
 
 Urlquick2 is a wrapper for requests that add's support for http caching.
 It act's just like requests but with a few extra parameters and features.
@@ -41,7 +41,6 @@ Code Coverage: https://coveralls.io/github/willforde/urlquick2?branch=master
 Code Quality: https://app.codacy.com/app/willforde/urlquick2/dashboard
 """
 
-__all__ = ["Session"]
 __version__ = "2.0.0"
 
 # Standard Lib

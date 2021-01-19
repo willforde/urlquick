@@ -15,11 +15,14 @@ returns a 304 Not-Modified response, the cache is used, saving having to re-down
 Usage
 -----
 
-```pycon
->>> import urlquick
+```python
+>>> from urlquick import Session
+
+# Make a connection pool.
+>>> http = Session()
 
 # Make a request.
->>> r = urlquick.get('https://httpbin.org/ip')
+>>> r = http.get('https://httpbin.org/ip')
 
 # View response data.
 >>> r.json()
@@ -30,11 +33,11 @@ Usage
 Install
 -------
 Stable
-```bash
-pip install urlquick
+```console
+$ pip install urlquick
 ```
 
 Unstable
-```bash
-pip install git+https://github.com/willforde/urlquick.git
+```console
+$ pip install git+https://github.com/willforde/urlquick.git
 ```
