@@ -41,7 +41,6 @@ Code Coverage: https://coveralls.io/github/willforde/urlquick2?branch=master
 Code Quality: https://app.codacy.com/app/willforde/urlquick2/dashboard
 """
 
-__all__ = ["Session"]
 __version__ = "2.0.0"
 
 # Standard Lib
