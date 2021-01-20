@@ -1,6 +1,10 @@
 Urlquick II: Requests, but with caching.
 ========================================
 
+![PyPI](https://img.shields.io/pypi/v/urlquick)
+[![Documentation Status](https://readthedocs.org/projects/urlquick/badge/?version=stable)](https://urlquick.readthedocs.io/en/stable/?badge=stable)
+
+
 Urlquick II
 -----------
 Urlquick2 is a wrapper for requests that add's support for http caching.
