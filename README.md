@@ -1,8 +1,9 @@
-Urlquick II: Requests, but with caching.
-========================================
+Urlquick II: Requests, but with caching
+=======================================
 
 ![PyPI](https://img.shields.io/pypi/v/urlquick)
 [![Documentation Status](https://readthedocs.org/projects/urlquick/badge/?version=stable)](https://urlquick.readthedocs.io/en/stable/?badge=stable)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/urlquick)
 
 
 Urlquick II
