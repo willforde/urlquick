@@ -330,11 +330,11 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
 
     # noinspection PyShadowingNames
     def send(self, request, **kwargs):  # type: (PreparedRequest, ...) -> Response
-        max_age = int(request.headers.pop("x-cache-max-age"))
         urlhash = self.hash_url(request)
 
         # Check if request has a valid cache and return it
         if request.method in CACHEABLE_METHODS:
+            max_age = int(request.headers.pop("x-cache-max-age"))
             cache = self.get_cache(urlhash, max_age)
             if cache and cache.isfresh:
                 logger.debug("Cache is fresh")

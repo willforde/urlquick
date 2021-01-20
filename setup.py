@@ -28,8 +28,8 @@ def extract_variable(filename, variable):  # type: (str, str) -> str
 setup(
     name='urlquick',
     version=extract_variable('urlquick.py', '__version__'),
-    description='A light-weight http client with requests like interface.'
-                'Featuring persistent connectionsand caching support.',
+    description="Requests wrapper that add's support for HTTP caching. It act's just "
+                "like requests but with a few extra parameters and features.",
     long_description=readfile('README.md'),
     long_description_content_type='text/markdown',
     python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*",
