@@ -74,7 +74,7 @@ try:
     _CACHE_LOCATION = _translatePath(_addon_data.getAddonInfo("profile"))
     _DEFAULT_RAISE_FOR_STATUS = True
 except ImportError:
-    _CACHE_LOCATION = os.path.join(os.getcwd(), ".cache")
+    _CACHE_LOCATION = os.path.join(os.getcwd(), ".urlquick.cache")
     _DEFAULT_RAISE_FOR_STATUS = False
 
 # Check for python 2, for compatibility
