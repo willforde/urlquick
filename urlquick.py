@@ -230,11 +230,15 @@ class CacheRecord(object):
             headers["If-modified-since"] = cached_headers["Last-Modified"]
 
 
+def to_bytes_string(value):  # type: (...) -> bytes
+    """Convert value to bytes if required."""
+    return value.encode("utf8") if isinstance(value, type(u"")) else value
+
+
 def hash_url(req):  # type: (PreparedRequest) -> str
     """Return url as a sha1 encoded hash."""
-    url = req.url.encode("utf8") if isinstance(req.url, type(u"")) else req.url
-    method = req.method.encode("utf8") if isinstance(req.method, type(u"")) else req.method
-    return hashlib.sha1(b''.join((method, url, req.body or b''))).hexdigest()
+    data = to_bytes_string(req.url + req.method)
+    return hashlib.sha1(b''.join((data, req.body or b''))).hexdigest()
 
 
 class CacheHTTPAdapter(adapters.HTTPAdapter):
@@ -284,16 +288,12 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
             # Check if database is currupted
             if repeat is False and (str(e).find("file is encrypted") > -1 or str(e).find("not a database") > -1):
                 logger.debug("Corrupted database detected, Cleaning...")
-                return self.execute_retry(query, values)
+                self.close()
+                os.remove(self.cache_file)
+                self.conn = self.connect()
+                return self.execute(query, values, repeat=True)
             else:
                 raise e
-
-    def execute_retry(self, query, values):  # type: (str, tuple) -> sqlite3.Cursor
-        """Delete corrupted database and try again."""
-        self.close()
-        os.remove(self.cache_file)
-        self.conn = self.connect()
-        return self.execute(query, values, repeat=True)
 
     def close(self):
         if self._closed is False:
