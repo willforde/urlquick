@@ -1,10 +1,33 @@
 from setuptools import setup
 from codecs import open
 from os import path
+import sys
 import re
+
+# noinspection PyPep8Naming
+from setuptools.command.test import test as TestCommand
 
 # Path to local directory
 here = path.abspath(path.dirname(__file__))
+
+
+class PyTest(TestCommand):
+    user_options = [('pytest-args=', 'a', "Arguments to pass into py.test")]
+
+    def initialize_options(self):
+        super(PyTest, self).initialize_options()
+        self.pytest_args = ['--cov']
+
+    def finalize_options(self):
+        super(PyTest, self).finalize_options()
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        # noinspection PyPackageRequirements,PyUnresolvedReferences
+        import pytest
+        errno = pytest.main(self.pytest_args)
+        sys.exit(errno)
 
 
 def readfile(filename):  # type: (str) -> str
@@ -32,10 +55,15 @@ setup(
                 "like requests but with a few extra parameters and features.",
     long_description=readfile('README.md'),
     long_description_content_type='text/markdown',
-    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*",
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     install_requires=[
-        "requests",
-        "htmlement",
+        'requests',
+        'htmlement',
+    ],
+    cmdclass={'test': PyTest},
+    tests_require=[
+        'pytest',
+        'pytest-cov',
     ],
     keywords='python http caching requests',
     classifiers=[
@@ -59,10 +87,9 @@ setup(
     ],
     url='https://github.com/willforde/urlquick',
     platforms=['OS Independent'],
-    extras_require={'For parsing html content using response.parse()': ["htmlement"]},
     author='William Forde',
     author_email='willforde@gmail.com',
-    license='MIT License',
+    license='MIT',
     py_modules=['urlquick'],
     zip_safe=False,
     project_urls={
