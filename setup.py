@@ -16,7 +16,7 @@ class PyTest(TestCommand):
 
     def initialize_options(self):
         super(PyTest, self).initialize_options()
-        self.pytest_args = ['--cov']
+        self.pytest_args = ['--cov', '--cov-report', 'xml']
 
     def finalize_options(self):
         super(PyTest, self).finalize_options()
@@ -64,6 +64,7 @@ setup(
     tests_require=[
         'pytest',
         'pytest-cov',
+        'tox',
     ],
     keywords='python http caching requests',
     classifiers=[
