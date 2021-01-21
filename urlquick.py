@@ -23,10 +23,10 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
-Urlquick2
+Urlquick II
 --------
 
-Urlquick2 is a wrapper for requests that add's support for http caching.
+Urlquick II is a wrapper for requests that add's support for http caching.
 It act's just like requests but with a few extra parameters and features.
 'Requests' itself is left untouched.
 
@@ -230,6 +230,13 @@ class CacheRecord(object):
             headers["If-modified-since"] = cached_headers["Last-Modified"]
 
 
+def hash_url(req):  # type: (PreparedRequest) -> str
+    """Return url as a sha1 encoded hash."""
+    url = req.url.encode("utf8") if isinstance(req.url, type(u"")) else req.url
+    method = req.method.encode("utf8") if isinstance(req.method, type(u"")) else req.method
+    return hashlib.sha1(b''.join((method, url, req.body or b''))).hexdigest()
+
+
 class CacheHTTPAdapter(adapters.HTTPAdapter):
     """Requests adapter that handels https requests and caches them for later use."""
 
@@ -277,25 +284,22 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
             # Check if database is currupted
             if repeat is False and (str(e).find("file is encrypted") > -1 or str(e).find("not a database") > -1):
                 logger.debug("Corrupted database detected, Cleaning...")
-                self.close()
-                os.remove(self.cache_file)
-                self.conn = self.connect()
-                return self.execute(query, values, repeat=True)
+                return self.execute_retry(query, values)
             else:
                 raise e
+
+    def execute_retry(self, query, values):  # type: (str, tuple) -> sqlite3.Cursor
+        """Delete corrupted database and try again."""
+        self.close()
+        os.remove(self.cache_file)
+        self.conn = self.connect()
+        return self.execute(query, values, repeat=True)
 
     def close(self):
         if self._closed is False:
             self.conn.cursor().close()
             self.conn.close()
             self._closed = True
-
-    # noinspection PyMethodMayBeStatic, PyShadowingNames
-    def hash_url(self, request):  # type: (PreparedRequest) -> str
-        """Return url as a sha1 encoded hash."""
-        url = request.url.encode("utf8") if isinstance(request.url, type(u"")) else request.url
-        method = request.method.encode("utf8") if isinstance(request.method, type(u"")) else request.method
-        return hashlib.sha1(b''.join((method, url, request.body or b''))).hexdigest()
 
     def get_cache(self, urlhash, max_age):  # type: (str, int) -> CacheRecord
         """Return a cached response if one exists."""
@@ -330,9 +334,10 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
 
     # noinspection PyShadowingNames
     def send(self, request, **kwargs):  # type: (PreparedRequest, ...) -> Response
-        urlhash = self.hash_url(request)
+        urlhash = hash_url(request)
+        cache = None
 
-        # Check if request has a valid cache and return it
+        # Check if request is already cached and valid
         if request.method in CACHEABLE_METHODS:
             max_age = int(request.headers.pop("x-cache-max-age"))
             cache = self.get_cache(urlhash, max_age)
@@ -343,30 +348,31 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
                 # Allows for Not Modified check
                 logger.debug("Cache is stale, adding conditional headers to request")
                 cache.add_conditional_headers(request.headers)
-        else:
-            cache = None
 
         # Send request for remote resource
         response = super(CacheHTTPAdapter, self).send(request, **kwargs)
-
-        # Check for Not Modified response
-        if cache and response.status_code == codes.not_modified:
-            logger.debug("Server return 304 Not Modified response, using cached response")
-            response.close()
-            self.reset_cache(urlhash)
-            return cache.response
-
-        # Cache any cacheable responses
-        elif request.method in CACHEABLE_METHODS and response.status_code in CACHEABLE_CODES:
-            logger.debug("Caching %s %s response", response.status_code, response.reason)
-            response = self.set_cache(urlhash, response)
-
-        return response
+        return self.process_response(response, cache, urlhash)
 
     def build_response(self, req, resp):  # type: (PreparedRequest, requests.Response) -> Response
         """Replace response object with our customized version."""
         resp = super(CacheHTTPAdapter, self).build_response(req, resp)
         return Response.extend_response(resp)
+
+    def process_response(self, response, cache, urlhash):  # type: (Response, CacheRecord, str) -> Response
+        """Save response to cache if possible."""
+        # Check for Not Modified response
+        if cache and response.status_code == codes.not_modified:
+            logger.debug("Server return 304 Not Modified response, using cached response")
+            response.close()
+            self.reset_cache(urlhash)
+            response = cache.response
+
+        # Cache any cacheable responses
+        elif response.request.method in CACHEABLE_METHODS and response.status_code in CACHEABLE_CODES:
+            logger.debug("Caching %s %s response", response.status_code, response.reason)
+            response = self.set_cache(urlhash, response)
+
+        return response
 
 
 class Session(sessions.Session):
