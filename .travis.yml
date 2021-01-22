@@ -1,7 +1,7 @@
 language: python
 arch: amd64
 os: linux
-dist: bionic
+dist: bionic  # Has python 2.7, 3.6, 3.7, 3.8 pre installed
 
 git:
   depth: 3
