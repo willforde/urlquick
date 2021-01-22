@@ -1,7 +1,7 @@
 language: python
 arch: amd64
 os: linux
-dist: focal
+dist: bionic
 
 git:
   depth: 3
