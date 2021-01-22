@@ -47,7 +47,7 @@ setup(
     long_description_content_type='text/markdown',
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     install_requires=extract_config_value("Pipfile", "packages"),
-    extras_require={"tests": extract_config_value("Pipfile", "dev-packages")},
+    extras_require={"dev": extract_config_value("Pipfile", "dev-packages")},
     keywords='python http caching requests',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
