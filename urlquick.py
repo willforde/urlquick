@@ -34,11 +34,11 @@ All GET, HEAD and POST requests are cached locally for a period of 4 hours, this
 conditional headers are added to any new request e.g. "Etag" and "Last-modified". Then if the server
 returns a 304 Not-Modified response, the cache is used, saving having to re-download the content body.
 
-Github: https://github.com/willforde/urlquick2
+Github: https://github.com/willforde/urlquick
 Documentation: http://urlquick.readthedocs.io/en/stable/?badge=stable
-Testing: https://travis-ci.org/willforde/urlquick2
-Code Coverage: https://coveralls.io/github/willforde/urlquick2?branch=master
-Code Quality: https://app.codacy.com/app/willforde/urlquick2/dashboard
+Testing: https://www.travis-ci.com/github/willforde/urlquick
+Code Coverage: https://coveralls.io/github/willforde/urlquick?branch=master
+Code Quality: https://codeclimate.com/github/willforde/urlquick
 """
 
 __version__ = "2.0.0"
