@@ -8,6 +8,7 @@ requests = "*"
 htmlement = "*"
 
 [dev-packages]
+tox = "*"
 pytest = "*"
 pytest-cov = "*"
 

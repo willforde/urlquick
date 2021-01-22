@@ -1,33 +1,16 @@
 from setuptools import setup
 from codecs import open
 from os import path
-import sys
 import re
 
-# noinspection PyPep8Naming
-from setuptools.command.test import test as TestCommand
+try:
+    import configparser
+except ImportError:
+    # noinspection PyUnresolvedReferences, PyPep8Naming
+    import ConfigParser as configparser
 
 # Path to local directory
 here = path.abspath(path.dirname(__file__))
-
-
-class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', "Arguments to pass into py.test")]
-
-    def initialize_options(self):
-        super(PyTest, self).initialize_options()
-        self.pytest_args = ['--cov', '--cov-report', 'xml']
-
-    def finalize_options(self):
-        super(PyTest, self).finalize_options()
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        # noinspection PyPackageRequirements,PyUnresolvedReferences
-        import pytest
-        errno = pytest.main(self.pytest_args)
-        sys.exit(errno)
 
 
 def readfile(filename):  # type: (str) -> str
@@ -48,6 +31,13 @@ def extract_variable(filename, variable):  # type: (str, str) -> str
             raise RuntimeError("Unable to extract version number")
 
 
+def extract_config_value(filename, section):
+    """Extract values from a ini config file."""
+    config = configparser.ConfigParser()
+    config.read(filename)
+    return config.options(section) if config.has_section(section) else []
+
+
 setup(
     name='urlquick',
     version=extract_variable('urlquick.py', '__version__'),
@@ -56,16 +46,8 @@ setup(
     long_description=readfile('README.md'),
     long_description_content_type='text/markdown',
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
-    install_requires=[
-        'requests',
-        'htmlement',
-    ],
-    cmdclass={'test': PyTest},
-    tests_require=[
-        'pytest',
-        'pytest-cov',
-        'tox',
-    ],
+    install_requires=extract_config_value("Pipfile", "packages"),
+    extras_require={"tests": extract_config_value("Pipfile", "dev-packages")},
     keywords='python http caching requests',
     classifiers=[
         'Development Status :: 5 - Production/Stable',

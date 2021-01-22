@@ -3,7 +3,8 @@ Urlquick II: Requests, but with caching
 
 [![PyPI](https://img.shields.io/pypi/v/urlquick)](https://pypi.org/project/urlquick/)
 [![Documentation Status](https://readthedocs.org/projects/urlquick/badge/?version=stable)](https://urlquick.readthedocs.io/en/stable/?badge=stable)
-[![Maintainability](https://api.codeclimate.com/v1/badges/4db389d36baee177f907/maintainability)](https://codeclimate.com/github/willforde/urlquick/maintainability)
+[![Maintainability](https://api.codeclimate.com/v1/badges/4f622589a4b8e24ac996/maintainability)](https://codeclimate.com/github/willforde/urlquick/maintainability)
+[![Coverage Status](https://coveralls.io/repos/github/willforde/urlquick/badge.svg?branch=master)](https://coveralls.io/github/willforde/urlquick?branch=master)
 
 
 Urlquick II
