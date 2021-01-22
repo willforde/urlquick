@@ -1,4 +1,11 @@
 language: python
+arch: amd64
+os: linux
+dist: focal
+
+git:
+  depth: 3
+  quiet: true
 
 jobs:
   include:
@@ -17,10 +24,5 @@ install:
   - pip install coveralls
   - pip install tox
 
-git:
-  depth: 3
-  quiet: true
-
 script: tox
-
 after_success: coveralls
