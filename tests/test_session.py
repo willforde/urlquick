@@ -1,8 +1,9 @@
+import requests
 import urlquick
 import pytest
 
 
-@pytest.mark.parametrize("strings", [b"test.string.bytes", "test.string.str", u"test.string.unicode"])
-def test_to_bytes_string(strings):
-    value = urlquick.to_bytes_string(strings)
-    assert isinstance(value, bytes)
+def test_get(requests_mock):
+    requests_mock.get('http://test.com', text='data')
+    ret = urlquick.get('http://test.com')
+    assert ret.text == "data"

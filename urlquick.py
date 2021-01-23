@@ -60,6 +60,7 @@ except ImportError:
 
 # Third Party
 from requests.structures import CaseInsensitiveDict
+from requests.adapters import HTTPResponse
 from requests import adapters
 from requests import sessions
 from requests import *
@@ -353,7 +354,7 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
         response = super(CacheHTTPAdapter, self).send(request, **kwargs)
         return self.process_response(response, cache, urlhash)
 
-    def build_response(self, req, resp):  # type: (PreparedRequest, requests.Response) -> Response
+    def build_response(self, req, resp):  # type: (PreparedRequest, HTTPResponse) -> Response
         """Replace response object with our customized version."""
         resp = super(CacheHTTPAdapter, self).build_response(req, resp)
         return Response.extend_response(resp)
@@ -471,37 +472,40 @@ def request(method, url, **kwargs):  # type: (...) -> Response
 
 @wraps(requests.get, assigned=WRAPPER_ASSIGNMENTS)
 def get(url, params=None, **kwargs):  # type: (...) -> Response
-    return requests.get(url, params, **kwargs)
+    kwargs.setdefault('allow_redirects', True)
+    return request('get', url, params=params, **kwargs)
 
 
 @wraps(requests.options, assigned=WRAPPER_ASSIGNMENTS)
 def options(url, **kwargs):  # type: (...) -> Response
-    return requests.options(url, **kwargs)
+    kwargs.setdefault('allow_redirects', True)
+    return request('options', url, **kwargs)
 
 
 @wraps(requests.head, assigned=WRAPPER_ASSIGNMENTS)
 def head(url, **kwargs):  # type: (...) -> Response
-    return requests.head(url, **kwargs)
+    kwargs.setdefault('allow_redirects', False)
+    return request('head', url, **kwargs)
 
 
 @wraps(requests.post, assigned=WRAPPER_ASSIGNMENTS)
 def post(url, data=None, json=None, **kwargs):  # type: (...) -> Response
-    return requests.post(url, data, json, **kwargs)
+    return request('post', url, data=data, json=json, **kwargs)
 
 
 @wraps(requests.put, assigned=WRAPPER_ASSIGNMENTS)
 def put(url, data=None, **kwargs):  # type: (...) -> Response
-    return requests.put(url, data, **kwargs)
+    return request('put', url, data=data, **kwargs)
 
 
 @wraps(requests.patch, assigned=WRAPPER_ASSIGNMENTS)
 def patch(url, data=None, **kwargs):  # type: (...) -> Response
-    return requests.patch(url, data, **kwargs)
+    return request('patch', url, data=data, **kwargs)
 
 
 @wraps(requests.delete, assigned=WRAPPER_ASSIGNMENTS)
 def delete(url, **kwargs):  # type: (...) -> Response
-    return requests.delete(url, **kwargs)
+    return request('delete', url, **kwargs)
 
 
 @wraps(requests.session, assigned=WRAPPER_ASSIGNMENTS)
