@@ -297,6 +297,7 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
                 raise e
 
     def close(self):
+        super(CacheHTTPAdapter, self).close()
         if self._closed is False:
             self.conn.cursor().close()
             self.conn.close()
