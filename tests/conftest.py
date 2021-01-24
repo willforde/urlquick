@@ -9,7 +9,7 @@ from requests import adapters
 
 
 class RequestsMock(object):
-    def __init__(self, mocker: MockerFixture):
+    def __init__(self, mocker):
         self.mocker = mocker
         self._store = {}
 
