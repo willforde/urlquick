@@ -1,4 +1,3 @@
-from pytest_mock import MockerFixture
 import requests
 import urlquick
 import pytest
