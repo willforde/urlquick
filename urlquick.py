@@ -69,10 +69,10 @@ import requests
 # Change some values if running within Kodi
 try:
     # noinspection PyUnresolvedReferences
-    import xbmcvfs, xbmc, xbmcaddon
+    import xbmc, xbmcvfs, xbmcaddon
     _addon_data = xbmcaddon.Addon()
-    _translatePath = xbmcvfs.translatePath if hasattr(xbmcvfs, "translatePath") else xbmc.translatePath
-    _CACHE_LOCATION = _translatePath(_addon_data.getAddonInfo("profile"))
+    _translate_path = xbmcvfs.translatePath if hasattr(xbmcvfs, "translatePath") else xbmc.translatePath
+    _CACHE_LOCATION = _translate_path(_addon_data.getAddonInfo("profile"))
     _DEFAULT_RAISE_FOR_STATUS = True
 except ImportError:
     _CACHE_LOCATION = os.path.join(os.getcwd(), ".urlquick.cache")
@@ -113,11 +113,11 @@ CACHE_LOCATION = _CACHE_LOCATION
 
 #: The time in seconds where a cache item is considered stale.
 #: Stale items will stay in the database to allow for conditional headers.
-MAX_AGE = 60*60*4  # 4 Hours
+MAX_AGE = 60 * 60 * 4  # 4 Hours
 
 #: The time in seconds where a cache item is considered expired.
 #: Expired items will be removed from the database.
-EXPIRES = 60*60*24*7  # 1 week
+EXPIRES = 60 * 60 * 24 * 7  # 1 week
 
 # Function components to wrap when overriding requests functions
 WRAPPER_ASSIGNMENTS = ["__doc__"]
@@ -204,6 +204,17 @@ class Response(requests.Response):
             return sqlite3.Binary(data)
 
 
+def to_bytes_string(value):  # type: (...) -> bytes
+    """Convert value to bytes if required."""
+    return value.encode("utf8") if isinstance(value, type(u"")) else value
+
+
+def hash_url(req):  # type: (PreparedRequest) -> str
+    """Return url as a sha1 encoded hash."""
+    data = to_bytes_string(req.url + req.method)
+    return hashlib.sha1(b''.join((data, req.body or b''))).hexdigest()
+
+
 class CacheRecord(object):
     """SQL cache data record."""
 
@@ -229,17 +240,6 @@ class CacheRecord(object):
             headers["If-none-match"] = cached_headers["ETag"]
         if "Last-modified" in cached_headers:
             headers["If-modified-since"] = cached_headers["Last-Modified"]
-
-
-def to_bytes_string(value):  # type: (...) -> bytes
-    """Convert value to bytes if required."""
-    return value.encode("utf8") if isinstance(value, type(u"")) else value
-
-
-def hash_url(req):  # type: (PreparedRequest) -> str
-    """Return url as a sha1 encoded hash."""
-    data = to_bytes_string(req.url + req.method)
-    return hashlib.sha1(b''.join((data, req.body or b''))).hexdigest()
 
 
 class CacheHTTPAdapter(adapters.HTTPAdapter):
@@ -305,8 +305,8 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
 
     def get_cache(self, urlhash, max_age):  # type: (str, int) -> CacheRecord
         """Return a cached response if one exists."""
-        result = self.execute("""SELECT key, response, 
-        CASE WHEN ? == -1 THEN 1 ELSE strftime('%s', 'now') - strftime('%s', cached_date, 'unixepoch') < ? END AS fresh 
+        result = self.execute("""SELECT key, response,
+        CASE WHEN ? == -1 THEN 1 ELSE strftime('%s', 'now') - strftime('%s', cached_date, 'unixepoch') < ? END AS fresh
         FROM urlcache WHERE key = ?""", (max_age, max_age, urlhash))
         record = result.fetchone()
         if record is not None:
