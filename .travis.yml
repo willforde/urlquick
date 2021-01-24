@@ -6,11 +6,13 @@ dist: bionic  # Has python 2.7, 3.6, 3.7, 3.8 pre installed
 git:
   depth: 3
   quiet: true
+  autocrlf: input
 
 jobs:
   include:
     - python: "2.7"
       env: TOXENV=py27
+      stage: testing
     - python: "3.6"
       env: TOXENV=py36
     - python: "3.7"
