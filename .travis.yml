@@ -21,6 +21,8 @@ jobs:
       env: TOXENV=py38
     - python: "3.9"
       env: TOXENV=py39
+    - name: Flake8
+      env: TOXENV=flake8
 
 install:
   - pip install coveralls
