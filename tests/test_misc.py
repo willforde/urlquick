@@ -26,3 +26,13 @@ def test_hash_url(method, url, body):
     urlhash = urlquick.hash_url(req)
     assert isinstance(urlhash, str)
     assert len(urlhash) == 40
+
+
+def test_cache_cleanup():
+    with pytest.deprecated_call():
+        urlquick.cache_cleanup()
+
+
+def test_auto_cache_cleanup():
+    with pytest.deprecated_call():
+        urlquick.auto_cache_cleanup()

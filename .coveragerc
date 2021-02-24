@@ -1,6 +1,6 @@
 [run]
 source=urlquick
-branch = True
+branch=True
 
 [report]
 exclude_lines =
