@@ -219,7 +219,7 @@ class CacheRecord(object):
     """SQL cache data record."""
 
     def __init__(self, record):  # type: (sqlite3.Row) -> None
-        self._response = response = pickle.loads(record["response"])
+        self._response = response = pickle.loads(bytes(record["response"]))
         self._fresh = record["fresh"] or response.status_code in REDIRECT_CODES
 
     @property
@@ -289,7 +289,8 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
             # Check if database is currupted
             if repeat is False and (str(e).find("file is encrypted") > -1 or str(e).find("not a database") > -1):
                 logger.debug("Corrupted database detected, Cleaning...")
-                self.close()
+                self.conn.cursor().close()
+                self.conn.close()
                 os.remove(self.cache_file)
                 self.conn = self.connect()
                 return self.execute(query, values, repeat=True)
@@ -297,6 +298,7 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
                 raise e
 
     def close(self):
+        """Close the HTTPAdapter and SQLITE database."""
         super(CacheHTTPAdapter, self).close()
         if self._closed is False:
             self.conn.cursor().close()
@@ -310,7 +312,16 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
         FROM urlcache WHERE key = ?""", (max_age, max_age, urlhash))
         record = result.fetchone()
         if record is not None:
-            return CacheRecord(record)
+            try:
+                return CacheRecord(record)
+            except ValueError as e:
+                # If unsupported protocol is raised, then wipe the database clean
+                # This can happen when downgrading python versions
+                if "unsupported pickle protocol" in str(e):
+                    self.wipe()
+                else:
+                    # Remove cache item
+                    self.del_cache(urlhash)
 
     def set_cache(self, urlhash, resp):  # type: (str, Response) -> Response
         """Save a response to database and return original response."""
@@ -319,6 +330,13 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
             (urlhash, resp)
         )
         return resp
+
+    def del_cache(self, urlhash):
+        """Remove a cache item from database."""
+        self.execute(
+            "DELETE FROM urlcache WHERE key = ?",
+            (urlhash,)
+        )
 
     def reset_cache(self, urlhash):  # type: (str) -> None
         """Reset the cached date to current time."""
@@ -333,6 +351,10 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
             "DELETE FROM urlcache WHERE strftime('%s', 'now') - strftime('%s', cached_date, 'unixepoch') > ?",
             (expires,)
         )
+
+    def wipe(self):
+        """Wipe the database clean."""
+        self.execute("DELETE FROM urlcache")
 
     # noinspection PyShadowingNames
     def send(self, request, **kwargs):  # type: (PreparedRequest, ...) -> Response
@@ -358,6 +380,7 @@ class CacheHTTPAdapter(adapters.HTTPAdapter):
     def build_response(self, req, resp):  # type: (PreparedRequest, HTTPResponse) -> Response
         """Replace response object with our customized version."""
         resp = super(CacheHTTPAdapter, self).build_response(req, resp)
+        print(type(resp.content))
         return Response.extend_response(resp)
 
     def process_response(self, response, cache, urlhash):  # type: (Response, CacheRecord, str) -> Response

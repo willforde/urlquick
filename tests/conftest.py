@@ -27,6 +27,10 @@ class RequestsMock(object):
         kwargs.setdefault("reason", "OK")
         kwargs["preload_content"] = False
         kwargs["decode_content"] = False
+
+        # Add mock headers
+        headers = kwargs.setdefault("headers", {})
+        headers.setdefault("Content-Type", "text/html; charset=utf8")
         return HTTPResponse(**kwargs)
 
     def request(self, method, url, data=b"", **kwargs):  # type: (str, str, bytes, ...) -> None
