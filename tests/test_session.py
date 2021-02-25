@@ -2,6 +2,7 @@ import urlquick
 import requests
 import shutil
 import pytest
+import sqlite3
 import time
 
 
@@ -275,3 +276,89 @@ def test_session_method(requests_mock):
     assert mocked.called
     assert ret.content == b"data"
     assert ret.text == "data"
+
+
+def test_cache_unsupported_protocol(mocker, requests_mock):
+    """Test that get_cache will clear the cache on error."""
+    shutil.rmtree(urlquick.CACHE_LOCATION, ignore_errors=True)
+    mocked_url_1 = requests_mock.get('https://www.test.com/1', body=b"test1")
+    mocked_url_2 = requests_mock.get('https://www.test.com/2', body=b"test2")
+    session = urlquick.Session()
+
+    # Check that the mocked url is called
+    ret = session.get('https://www.test.com/1')
+    assert mocked_url_1.called
+    assert ret.content == b"test1"
+    mocked_url_1.reset_stats()
+    ret = session.get('https://www.test.com/2')
+    assert mocked_url_2.called
+    assert ret.content == b"test2"
+    mocked_url_2.reset_stats()
+
+    # Should be cached now so mocked should not be called
+    ret = session.get('https://www.test.com/1')
+    assert not mocked_url_1.called
+    assert ret.content == b"test1"
+    mocked_url_1.reset_stats()
+    ret = session.get('https://www.test.com/2')
+    assert not mocked_url_2.called
+    assert ret.content == b"test2"
+    mocked_url_2.reset_stats()
+
+    # Mock CacheRecord to raise ValueError
+    mocked = mocker.patch("urlquick.CacheRecord")
+    mocked.side_effect = ValueError("unsupported pickle protocol")
+
+    # For a unsupported pickle protocol the whole cache is wiped so both should be called
+    ret = session.get('https://www.test.com/1')
+    assert mocked_url_1.called
+    assert ret.content == b"test1"
+    mocked.stopall()
+    # This should be called again
+    ret = session.get('https://www.test.com/2')
+    assert mocked_url_2.called
+    assert ret.content == b"test2"
+
+
+def test_cache_unknown_error(mocker, requests_mock):
+    """Test that get_cache will clear the cache on error."""
+    shutil.rmtree(urlquick.CACHE_LOCATION, ignore_errors=True)
+    mocked_url_1 = requests_mock.get('https://www.test.com/1', body=b"test1")
+    mocked_url_2 = requests_mock.get('https://www.test.com/2', body=b"test2")
+    session = urlquick.Session()
+
+    # Check that the mocked url is called
+    ret = session.get('https://www.test.com/1')
+    assert mocked_url_1.called
+    assert ret.content == b"test1"
+    mocked_url_1.reset_stats()
+    ret = session.get('https://www.test.com/2')
+    assert mocked_url_2.called
+    assert ret.content == b"test2"
+    mocked_url_2.reset_stats()
+
+    # Should be cached now so mocked should not be called
+    ret = session.get('https://www.test.com/1')
+    assert not mocked_url_1.called
+    assert ret.content == b"test1"
+    mocked_url_1.reset_stats()
+    ret = session.get('https://www.test.com/2')
+    assert not mocked_url_2.called
+    assert ret.content == b"test2"
+    mocked_url_2.reset_stats()
+
+    # Mock CacheRecord to raise ValueError
+    mocked = mocker.patch.object(urlquick, "CacheRecord")
+    mocked.side_effect = ValueError("normal error")
+
+    # For normal errors only the current cache item
+    # will be remove but all the rest will stay
+    ret = session.get('https://www.test.com/1')
+    assert mocked_url_1.called
+    assert ret.content == b"test1"
+    mocker.stopall()
+
+    # This request should not be called again
+    ret = session.get('https://www.test.com/2')
+    assert not mocked_url_2.called
+    assert ret.content == b"test2"
