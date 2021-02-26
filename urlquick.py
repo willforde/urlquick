@@ -24,8 +24,7 @@
 
 """
 Urlquick II
---------
-
+-----------
 Urlquick II is a wrapper for requests that add's support for http caching.
 It act's just like requests but with a few extra parameters and features.
 'Requests' itself is left untouched.
