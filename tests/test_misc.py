@@ -13,7 +13,8 @@ def test_to_bytes_string(string):
 @pytest.mark.parametrize("method, url, body", (
     ("get", "https://httpbin.org/get", b""),
     ("head", "https://httpbin.org/get", b""),
-    ("post", "https://httpbin.org/post", b"data")
+    ("post", "https://httpbin.org/post", b"data"),
+    ("post", "https://httpbin.org/post", "data"),
 ))
 def test_hash_url(method, url, body):
     # Build Request object

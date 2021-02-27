@@ -199,7 +199,8 @@ def to_bytes_string(value):  # type: (...) -> bytes
 def hash_url(req):  # type: (PreparedRequest) -> str
     """Return url as a sha1 encoded hash."""
     data = to_bytes_string(req.url + req.method)
-    return hashlib.sha1(b''.join((data, req.body or b''))).hexdigest()
+    body = to_bytes_string(req.body) if req.body else b''
+    return hashlib.sha1(b''.join((data, body))).hexdigest()
 
 
 class CacheRecord(object):
