@@ -262,7 +262,7 @@ class TestCacheHandler(unittest.TestCase):
 
     def test_always_fresh_maxage(self):
         with self.create("https://httpbin.org/get", -1) as cache:
-            self.assertTrue(cache.isfresh())
+            self.assertFalse(cache.isfresh())
 
     def test_isfilefresh_yes(self):
         with self.create("https://httpbin.org/get", 999999999) as cache:
