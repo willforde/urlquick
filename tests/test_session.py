@@ -98,7 +98,7 @@ class TestSessionCaching(object):
         assert mocked.called
         assert ret.content == b"data"
 
-    def test_always_valid(self, requests_mock):
+    def test_disable_flag(self, requests_mock):
         mocked = requests_mock.get('https://www.test.com/1', body=b"data")
         ret = urlquick.get('https://www.test.com/1')
         assert mocked.called
@@ -106,7 +106,7 @@ class TestSessionCaching(object):
         mocked.reset_stats()
 
         ret = urlquick.get('https://www.test.com/1', max_age=-1)
-        assert not mocked.called
+        assert mocked.called
         assert ret.content == b"data"
 
     def test_never_valid(self, requests_mock):
