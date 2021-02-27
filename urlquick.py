@@ -297,7 +297,7 @@ class CacheHandler(object):
     def isfresh(self):
         """Return True if cache is fresh else False."""
         # Check that the response is of status 301 or that the cache is not older than the max age
-        if self.response.status in (301, 308, 414) or self.max_age == -1:
+        if self.response.status in (301, 308, 414):
             return True
         elif self.max_age == 0:
             return False
