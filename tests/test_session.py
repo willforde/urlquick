@@ -2,7 +2,6 @@ import urlquick
 import requests
 import shutil
 import pytest
-import sqlite3
 import time
 
 
@@ -19,6 +18,7 @@ class TestSessionClean(object):
         mocked = requests_mock.get('https://www.test.com/test/586', body=b"data")
         ret = obj.get('https://www.test.com/test/586')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
         assert ret.text == "data"
 
@@ -26,12 +26,14 @@ class TestSessionClean(object):
         mocked = requests_mock.options('https://www.test.com', json={"test": True})
         ret = obj.options('https://www.test.com')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.json() == {"test": True}
 
     def test_head(self, obj, requests_mock):
         mocked = requests_mock.head('https://www.test.com', headers={"X-TEST": "12345"})
         ret = obj.head('https://www.test.com')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b""
         assert ret.text == ""
         assert "X-TEST" in ret.headers and ret.headers["X-TEST"] == "12345"
@@ -40,30 +42,35 @@ class TestSessionClean(object):
         mocked = requests_mock.post('https://www.test.com', json={"test": True}, data=b"test")
         ret = obj.post('https://www.test.com', data=b"test")
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.json() == {"test": True}
 
     def test_put(self, obj, requests_mock):
         mocked = requests_mock.put('https://www.test.com', json={"test": True})
         ret = obj.put('https://www.test.com')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.json() == {"test": True}
 
     def test_patch(self, obj, requests_mock):
         mocked = requests_mock.patch('https://www.test.com', json={"test": True})
         ret = obj.patch('https://www.test.com')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.json() == {"test": True}
 
     def test_delete(self, obj, requests_mock):
         mocked = requests_mock.delete('https://www.test.com', json={"test": True})
         ret = obj.delete('https://www.test.com')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.json() == {"test": True}
 
     def test_headers_none(self, obj, requests_mock):
         mocked = requests_mock.get('https://www.test.com/50', json={"test": True})
         ret = obj.get('https://www.test.com/50', headers=None)
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.json() == {"test": True}
 
 
@@ -79,67 +86,79 @@ class TestSessionCaching(object):
         mocked = requests_mock.get('https://www.test.com/1', body=b"data")
         ret = urlquick.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
         mocked.reset_stats()
 
         ret = urlquick.get('https://www.test.com/1')
         assert not mocked.called
+        assert ret.from_cache is True
         assert ret.content == b"data"
 
     def test_delay(self, requests_mock):
         mocked = requests_mock.get('https://www.test.com/1', body=b"data")
         ret = urlquick.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
         mocked.reset_stats()
 
         time.sleep(1.2)  # 1.2 seconds should be enough
         ret = urlquick.get('https://www.test.com/1', max_age=1)
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
 
     def test_disable_flag(self, requests_mock):
         mocked = requests_mock.get('https://www.test.com/1', body=b"data")
         ret = urlquick.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
         mocked.reset_stats()
 
         ret = urlquick.get('https://www.test.com/1', max_age=-1)
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
 
     def test_never_valid(self, requests_mock):
         mocked = requests_mock.get('https://www.test.com/1', body=b"data")
         ret = urlquick.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
         mocked.reset_stats()
 
         ret = urlquick.get('https://www.test.com/1', max_age=0)
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
 
     def test_etag(self, requests_mock):
         mocked = requests_mock.get('https://www.test.com/1', body=b"data", headers={"Etag": "12345"})
         ret = urlquick.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
         mocked.reset_stats()
 
         ret = urlquick.get('https://www.test.com/1', max_age=0)
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
 
     def test_last_modified(self, requests_mock):
         mocked = requests_mock.get('https://www.test.com/1', body=b"test 304", headers={"Last-modified": "12345"})
         ret = urlquick.get('https://www.test.com/1')  # Gets cached
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"test 304"
 
         mocked = requests_mock.get('https://www.test.com/1', headers={"Last-modified": "12345"}, status=304)
         ret = urlquick.get('https://www.test.com/1', max_age=0)
         assert mocked.called
+        assert ret.from_cache is True
         assert ret.content == b"test 304"
 
     def test_wipe(self, requests_mock):
@@ -148,6 +167,7 @@ class TestSessionCaching(object):
 
         ret = session.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
         mocked.reset_stats()
 
@@ -156,6 +176,7 @@ class TestSessionCaching(object):
 
         ret = session.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
 
     def test_delete(self, requests_mock):
@@ -165,6 +186,7 @@ class TestSessionCaching(object):
 
         ret = session.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
         mocked.reset_stats()
 
@@ -181,6 +203,7 @@ class TestSessionCaching(object):
 
         ret = session.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.content == b"data"
 
 
@@ -198,6 +221,7 @@ class TestRaiseForStatus(object):
 
         ret = session.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.status_code == 200
         assert ret.content == b"data"
 
@@ -207,6 +231,7 @@ class TestRaiseForStatus(object):
 
         ret = session.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.status_code == 404
         assert ret.content == b"data"
 
@@ -216,6 +241,7 @@ class TestRaiseForStatus(object):
 
         ret = session.get('https://www.test.com/1')
         assert mocked.called
+        assert ret.from_cache is False
         assert ret.status_code == 200
         assert ret.content == b"data"
 
@@ -265,6 +291,7 @@ def test_request_header_data(requests_mock):
 
     ret = session.request("GET", 'https://www.test.com/test/542', None, None, {"X-TEST": "test"})
     assert mocked.called
+    assert ret.from_cache is False
     assert ret.content == b"data"
 
 
@@ -274,6 +301,7 @@ def test_session_method(requests_mock):
     session = urlquick.session()
     ret = session.get('https://www.test.com')
     assert mocked.called
+    assert ret.from_cache is False
     assert ret.content == b"data"
     assert ret.text == "data"
 
@@ -288,20 +316,24 @@ def test_cache_unsupported_protocol(mocker, requests_mock):
     # Check that the mocked url is called
     ret = session.get('https://www.test.com/1')
     assert mocked_url_1.called
+    assert ret.from_cache is False
     assert ret.content == b"test1"
     mocked_url_1.reset_stats()
     ret = session.get('https://www.test.com/2')
     assert mocked_url_2.called
+    assert ret.from_cache is False
     assert ret.content == b"test2"
     mocked_url_2.reset_stats()
 
     # Should be cached now so mocked should not be called
     ret = session.get('https://www.test.com/1')
     assert not mocked_url_1.called
+    assert ret.from_cache is True
     assert ret.content == b"test1"
     mocked_url_1.reset_stats()
     ret = session.get('https://www.test.com/2')
     assert not mocked_url_2.called
+    assert ret.from_cache is True
     assert ret.content == b"test2"
     mocked_url_2.reset_stats()
 
@@ -312,11 +344,13 @@ def test_cache_unsupported_protocol(mocker, requests_mock):
     # For a unsupported pickle protocol the whole cache is wiped so both should be called
     ret = session.get('https://www.test.com/1')
     assert mocked_url_1.called
+    assert ret.from_cache is False
     assert ret.content == b"test1"
     mocked.stopall()
     # This should be called again
     ret = session.get('https://www.test.com/2')
     assert mocked_url_2.called
+    assert ret.from_cache is False
     assert ret.content == b"test2"
 
 
@@ -330,20 +364,24 @@ def test_cache_unknown_error(mocker, requests_mock):
     # Check that the mocked url is called
     ret = session.get('https://www.test.com/1')
     assert mocked_url_1.called
+    assert ret.from_cache is False
     assert ret.content == b"test1"
     mocked_url_1.reset_stats()
     ret = session.get('https://www.test.com/2')
     assert mocked_url_2.called
+    assert ret.from_cache is False
     assert ret.content == b"test2"
     mocked_url_2.reset_stats()
 
     # Should be cached now so mocked should not be called
     ret = session.get('https://www.test.com/1')
     assert not mocked_url_1.called
+    assert ret.from_cache is True
     assert ret.content == b"test1"
     mocked_url_1.reset_stats()
     ret = session.get('https://www.test.com/2')
     assert not mocked_url_2.called
+    assert ret.from_cache is True
     assert ret.content == b"test2"
     mocked_url_2.reset_stats()
 
@@ -355,10 +393,12 @@ def test_cache_unknown_error(mocker, requests_mock):
     # will be remove but all the rest will stay
     ret = session.get('https://www.test.com/1')
     assert mocked_url_1.called
+    assert ret.from_cache is False
     assert ret.content == b"test1"
     mocker.stopall()
 
     # This request should not be called again
     ret = session.get('https://www.test.com/2')
     assert not mocked_url_2.called
+    assert ret.from_cache is True
     assert ret.content == b"test2"

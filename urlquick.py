@@ -147,6 +147,10 @@ class CacheError(RequestException):
 
 
 class Response(requests.Response):
+    def __init__(self):
+        super(Response, self).__init__()
+        self.from_cache = False
+
     def xml(self):
         """
         Parse's "XML" document into a element tree.
@@ -209,6 +213,7 @@ class CacheRecord(object):
     def __init__(self, record):  # type: (sqlite3.Row) -> None
         self._response = response = pickle.loads(bytes(record["response"]))
         self._fresh = record["fresh"] or response.status_code in REDIRECT_CODES
+        self._response.from_cache = True
 
     @property
     def response(self):  # type: () -> Response
