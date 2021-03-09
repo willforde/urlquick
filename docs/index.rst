@@ -6,8 +6,6 @@
 Welcome to urlquick's 2 documentation!
 ====================================
 
-.. include::
-    ../README.md
 
 API
 ===
