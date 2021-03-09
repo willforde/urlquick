@@ -13,6 +13,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 import os
+import re
 import sys
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -20,9 +21,21 @@ import sys
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../'))
 
-# Fetch version number
-from urlquick import __version__
 
+def extract_variable(filename, variable):  # type: (str, str) -> str
+    """Extract the version number from a python file that contains the '__version__' variable."""
+    filename = os.path.abspath(filename)
+    with open(filename, "r", encoding="utf8") as stream:
+        search_refind = r'{} = ["\'](\d+\.\d+\.\d+)["\']'.format(variable)
+        verdata = re.search(search_refind, stream.read())
+        if verdata:
+            return verdata.group(1)
+        else:
+            raise RuntimeError("Unable to extract version number")
+
+
+# Fetch version number
+__version__ = extract_variable('../urlquick.py', '__version__'),
 
 # -- General configuration ------------------------------------------------
 
@@ -33,9 +46,11 @@ from urlquick import __version__
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
+extensions = [
+    'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.viewcode']
+    'sphinx.ext.viewcode'
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
