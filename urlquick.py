@@ -107,7 +107,7 @@ REDIRECT_CODES = {
     codes.permanent_redirect,
 }
 
-#: The default location for the cached files
+#: Location for the cache directory. Defaults to the current working directory.
 CACHE_LOCATION = _CACHE_LOCATION
 
 #: The time in seconds where a cache item is considered stale.

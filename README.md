@@ -44,7 +44,7 @@ returns a 304 Not-Modified response, the cache is used, saving having to re-down
 
 
 ## Install
-Stable
+Urlquick2 officially supports Python 2.7 & 3.6+.
 ```console
 $ pip install urlquick
 ```
