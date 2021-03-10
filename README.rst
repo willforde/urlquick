@@ -2,7 +2,7 @@
     :target: https://pypi.org/project/urlquick/0.9.2/
 
 .. image:: https://readthedocs.org/projects/urlquick/badge/?version=standalone
-    :target: http://urlquick.readthedocs.io/en/stable/?badge=standalone
+    :target: https://urlquick.readthedocs.io/en/standalone/
 
 .. image:: https://travis-ci.com/willforde/urlquick.svg?branch=standalone
     :target: https://travis-ci.com/willforde/urlquick
