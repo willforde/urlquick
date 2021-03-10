@@ -1,7 +1,7 @@
 # Urlquick II: Requests, but with caching
 
 [![PyPI](https://img.shields.io/pypi/v/urlquick)](https://pypi.org/project/urlquick/)
-[![Documentation Status](https://readthedocs.org/projects/urlquick/badge/?version=stable)](https://urlquick.readthedocs.io/en/stable/?badge=stable)
+[![Documentation Status](https://readthedocs.org/projects/urlquick/badge/?version=stable)](https://urlquick.readthedocs.io/en/stable/)
 [![Build Status](https://www.travis-ci.com/willforde/urlquick.svg?branch=master)](https://www.travis-ci.com/willforde/urlquick)
 [![Coverage Status](https://coveralls.io/repos/github/willforde/urlquick/badge.svg?branch=master)](https://coveralls.io/github/willforde/urlquick?branch=master)
 [![Maintainability](https://api.codeclimate.com/v1/badges/4f622589a4b8e24ac996/maintainability)](https://codeclimate.com/github/willforde/urlquick/maintainability)
