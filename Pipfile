@@ -12,6 +12,7 @@ tox = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"
+sphinx = "*"
 
 [requires]
 python_version = "3.9"

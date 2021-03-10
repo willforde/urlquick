@@ -149,11 +149,12 @@ class CacheError(RequestException):
 class Response(requests.Response):
     def __init__(self):
         super(Response, self).__init__()
+        #: Boolean to indicate if response came from the cache.
         self.from_cache = False
 
     def xml(self):
         """
-        Parse's "XML" document into a element tree.
+        Parse's XML document into a element tree.
 
         :return: The root element of the element tree.
         :rtype: xml.etree.ElementTree.Element

@@ -8,14 +8,22 @@
 
 
 ## Urlquick II
-Urlquick2 is a wrapper for requests that add's support for http caching.
-It act's just like requests but with a few extra parameters and features.
+Urlquick 2 is a wrapper for requests that add's support for http caching.
+It acts just like requests but with a few extra parameters and features.
 'Requests' itself is left untouched.
 
 All GET, HEAD and POST requests are cached locally for a period of 4 hours, this can be changed. When the cache expires,
 conditional headers are added to any new request e.g. "Etag" and "Last-modified". Then if the server
 returns a 304 Not-Modified response, the cache is used, saving having to re-download the content body.
 
+All of Requests `get`, `head`, `post` and `request` functions/methods all get 2 extra optional parameters.
+Both these 2 parameters can also be set on a session object too.
+* `max_age`: Age the 'cache' can be before it’s considered stale.
+* `raise_for_status`: Boolean that when set to `True` will call `resp.raise_for_status()` for you automatically.
+
+The Requests response objects also gets too new methods.
+* `parse()`: Parse’s “HTML” document into a element tree using HTMLement.
+* `xml()`: Parse’s XML document into a element tree.
 
 ## Usage
 
@@ -50,3 +58,7 @@ $ pip install urlquick
 ```
 
 ## Full Documentation over at [Read the Docs](https://urlquick.readthedocs.io)
+
+* [Requests Docs](https://requests.readthedocs.io/en/master/)
+* [HTMLement Docs](https://python-htmlement.readthedocs.io/en/stable/?badge=stable)
+* [Elementtree Docs](https://docs.python.org/3/library/xml.etree.elementtree.html)

@@ -35,7 +35,7 @@ def extract_variable(filename, variable):  # type: (str, str) -> str
 
 
 # Fetch version number
-__version__ = extract_variable('../urlquick.py', '__version__'),
+__version__ = extract_variable('../urlquick.py', '__version__')
 
 # -- General configuration ------------------------------------------------
 
@@ -50,7 +50,6 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
-    'recommonmark',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
