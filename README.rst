@@ -1,23 +1,15 @@
-.. image:: https://badge.fury.io/py/urlquick.svg
-    :target: https://pypi.python.org/pypi/urlquick
+.. image:: https://img.shields.io/pypi/v/urlquick
+    :target: https://pypi.org/project/urlquick/0.9.2/
 
-.. image:: https://readthedocs.org/projects/urlquick/badge/?version=stable
-    :target: http://urlquick.readthedocs.io/en/stable/?badge=stable
+.. image:: https://readthedocs.org/projects/urlquick/badge/?version=standalone
+    :target: http://urlquick.readthedocs.io/en/stable/?badge=standalone
 
-.. image:: https://travis-ci.org/willforde/urlquick.svg?branch=master
-    :target: https://travis-ci.org/willforde/urlquick
+.. image:: https://travis-ci.com/willforde/urlquick.svg?branch=standalone
+    :target: https://travis-ci.com/willforde/urlquick
 
-.. image:: https://coveralls.io/repos/github/willforde/urlquick/badge.svg?branch=master
-    :target: https://coveralls.io/github/willforde/urlquick?branch=master
+.. image:: https://coveralls.io/repos/github/willforde/urlquick/badge.svg?branch=standalone
+    :target: https://coveralls.io/github/willforde/urlquick?branch=standalone
 
-.. image:: https://api.codacy.com/project/badge/Grade/25951f521ebd4534ae64c725e0be9441
-    :target: https://www.codacy.com/app/willforde/urlquick?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=willforde/urlquick&amp;utm_campaign=Badge_Grade
-
-.. image:: https://img.shields.io/pypi/pyversions/urlquick.svg
-    :target: https://pypi.python.org/pypi/urlquick
-
-.. image:: https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg
-   :target: https://saythanks.io/to/willforde
 
 Urlquick
 --------
@@ -31,6 +23,7 @@ All GET, HEAD and POST requests are cached locally for a period of 4 hours. When
 conditional headers are added to a new request e.g. "Etag" and "Last-modified". Then if the server
 returns a 304 Not-Modified response, the cache is reused, saving having to re-download the content body.
 
+
 Features
 --------
 * Simple Keep-Alive & Connection Pooling
@@ -43,6 +36,7 @@ Features
 * Basic Authentication
 * Connection Timeouts
 * Resource Caching
+
 
 Install
 -------

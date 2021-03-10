@@ -22,29 +22,34 @@ def version(name):
             raise RuntimeError("Unable to extract version number")
 
 
-setup(name='urlquick',
-      version=version('urlquick.py'),
-      description='A light-weight http client with requests like interface.'
-                  'Featuring persistent connectionsand caching support.',
-      long_description=readme(),
-      keywords='url lightweight caching http-client requests',
-      classifiers=['Development Status :: 4 - Beta',
-                   'Intended Audience :: Developers',
-                   'License :: OSI Approved :: MIT License',
-                   'Natural Language :: English',
-                   'Operating System :: OS Independent',
-                   'Programming Language :: Python :: 2',
-                   'Programming Language :: Python :: 2.7',
-                   'Programming Language :: Python :: 3',
-                   'Programming Language :: Python :: 3.4',
-                   'Programming Language :: Python :: 3.5',
-                   'Programming Language :: Python :: 3.6',
-                   'Topic :: Internet :: WWW/HTTP',
-                   'Topic :: Software Development :: Libraries :: Python Modules'],
-      url='https://github.com/willforde/urlquick',
-      platforms=['OS Independent'],
-      extras_require={'For parsing html content using response.parse()': ["htmlement"]},
-      author='William Forde',
-      author_email='willforde@gmail.com',
-      license='MIT License',
-      py_modules=['urlquick'])
+setup(
+    name='urlquick',
+    version=version('urlquick.py'),
+    description='A light-weight http client with requests like interface.'
+                'Featuring persistent connectionsand caching support.',
+    long_description=readme(),
+    keywords='url lightweight caching http-client requests',
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: MIT License',
+        'Natural Language :: English',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Topic :: Internet :: WWW/HTTP',
+        'Topic :: Software Development :: Libraries :: Python Modules'
+    ],
+    url='https://github.com/willforde/urlquick',
+    platforms=['OS Independent'],
+    extras_require={'For parsing html content using response.parse()': ["htmlement"]},
+    include_package_data=True,
+    author='William Forde',
+    author_email='willforde@gmail.com',
+    license='MIT License',
+    py_modules=['urlquick']
+)
