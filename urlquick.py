@@ -40,7 +40,7 @@ Code Coverage: https://coveralls.io/github/willforde/urlquick?branch=master
 Code Quality: https://codeclimate.com/github/willforde/urlquick
 """
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 
 # Standard Lib
 from functools import wraps
