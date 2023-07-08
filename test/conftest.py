@@ -4,7 +4,6 @@ import pytest
 import json as _json
 import io
 
-from requests.adapters import HTTPResponse
 from requests import adapters
 
 
